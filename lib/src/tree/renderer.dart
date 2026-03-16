@@ -79,6 +79,10 @@ String renderTree(
         itemStyleFunc,
         enumeratorStyleFunc,
       ));
+      // Newline before next sibling (if any)
+      if (i < children.length - 1) {
+        buf.write('\n');
+      }
     } else if (i < children.length - 1) {
       buf.write('\n');
     }

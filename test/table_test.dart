@@ -143,5 +143,19 @@ void main() {
       final expected = File('test/testdata/table/columns.golden').readAsStringSync();
       expect(t.render(), equals(expected));
     });
+
+    test('no_border table matches golden', () {
+      final t = Table()
+        ..headers(['NAME', 'VALUE'])
+        ..rows([
+          ['Alpha', '1'],
+          ['Beta', '2'],
+        ])
+        ..borderDef(noBorder)
+        ..borderEdges(top: false, bottom: false, left: false, right: false)
+        ..borderHeader(false);
+      final expected = File('test/testdata/table/no_border.golden').readAsStringSync();
+      expect(t.render(), equals(expected));
+    });
   });
 }

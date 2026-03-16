@@ -172,10 +172,9 @@ Every upstream public feature is listed with its status.
 | Cell wrapping (default on) | Implemented |
 | Cell truncation with ellipsis | Implemented |
 | TableWidth/TableHeight/YOffset | Implemented |
-| Smart resizing (median-based) | Implemented |
-| Row-aware height/overflow with "…" | TODO |
-| Three-phase shrink algorithm | TODO |
-| Visibility getters | TODO |
+| Smart resizing (three-phase shrink) | Implemented |
+| Row-aware height/overflow with "…" | Implemented |
+| Visibility getters (firstVisible/lastVisible/visibleRows) | Implemented |
 
 ## Border Definitions
 
@@ -214,5 +213,6 @@ Every upstream public feature is listed with its status.
 | Feature | Status |
 |---------|--------|
 | Self-generated golden tests | Implemented |
-| Upstream-vendored golden tests | TODO |
+| Golden comparison tool (compare_goldens.dart) | Implemented |
+| Upstream-vendored golden tests | Implemented (framework ready; vendor goldens to test/testdata/upstream/) |
 | Parity manifest | Implemented (this file) |

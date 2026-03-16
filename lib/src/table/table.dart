@@ -2,11 +2,13 @@
 // Original: https://github.com/charmbracelet/lipgloss
 // Licensed under MIT by Charmbracelet, Inc.
 
+import 'dart:math' as math;
+
+import '../ansi/truncate.dart' as trunc;
 import '../ansi/width.dart';
 import '../border.dart';
 import '../style.dart';
 import '../wrap.dart' as wrap_lib;
-import '../ansi/truncate.dart' as trunc;
 import 'resizing.dart';
 import 'rows.dart';
 
@@ -32,6 +34,10 @@ class Table {
   int _height = 0;
   int _yOffset = 0;
   bool _wrap = true;
+
+  // Row-aware visibility (4e/4j)
+  int _firstVisibleRowIndex = 0;
+  int _lastVisibleRowIndex = -1;
 
   Table();
 
@@ -130,7 +136,7 @@ class Table {
     return this;
   }
 
-  /// Set the table height.
+  /// Set the table height (in rendered lines).
   Table tableHeight(int h) {
     _height = h;
     return this;
@@ -148,6 +154,19 @@ class Table {
     return this;
   }
 
+  // ─── Visibility getters (4j) ───
+
+  /// The first visible data row index after height/yOffset are applied.
+  int get firstVisibleRowIndex => _firstVisibleRowIndex;
+
+  /// The last visible data row index after height/yOffset are applied.
+  int get lastVisibleRowIndex => _lastVisibleRowIndex;
+
+  /// The number of visible data rows.
+  int get visibleRows => _lastVisibleRowIndex >= _firstVisibleRowIndex
+      ? _lastVisibleRowIndex - _firstVisibleRowIndex + 1
+      : 0;
+
   /// Render the table to a string.
   String render() {
     final numCols = _getNumColumns();
@@ -156,7 +175,7 @@ class Table {
     final hasHeaders = _headers.isNotEmpty;
     final b = _border;
 
-    // Build border styling
+    // Build border styling using _borderStyle.render() (4i)
     String sb(String s) {
       if (s.isEmpty) return s;
       return _borderStyle.render(s);
@@ -196,23 +215,20 @@ class Table {
     final effectiveWidths =
         _width > 0 ? colWidths : _naturalWidths(contentWidths, numCols);
 
-    final buf = StringBuffer();
+    // ─── Row-aware height/yOffset rendering (4e) ───
+    // Build all rendered row strings first, then apply visibility
+    final renderedRows = <String>[];
+    final rowSeparator = (_borderRow && b.middle.isNotEmpty)
+        ? _renderMiddleBorder(effectiveWidths, b, sb)
+        : null;
 
-    // Top border
-    if (_borderTop && b.top.isNotEmpty) {
-      buf.write(_renderTopBorder(effectiveWidths, b, sb));
-      buf.write('\n');
-    }
-
-    // Header row
+    // Header
+    String? headerStr;
+    String? headerSepStr;
     if (hasHeaders) {
-      buf.write(_renderRow(_headers, effectiveWidths, headerRow, b, sb));
-      buf.write('\n');
-
-      // Header separator
+      headerStr = _renderRow(_headers, effectiveWidths, headerRow, b, sb);
       if (_borderHeader && b.middle.isNotEmpty) {
-        buf.write(_renderMiddleBorder(effectiveWidths, b, sb));
-        buf.write('\n');
+        headerSepStr = _renderMiddleBorder(effectiveWidths, b, sb);
       }
     }
 
@@ -222,34 +238,97 @@ class Table {
       for (var col = 0; col < numCols; col++) {
         rowCells.add(_data.at(i, col));
       }
-      buf.write(_renderRow(rowCells, effectiveWidths, i, b, sb));
-      if (i < _data.rows - 1) {
-        buf.write('\n');
-        if (_borderRow && b.middle.isNotEmpty) {
-          buf.write(_renderMiddleBorder(effectiveWidths, b, sb));
-          buf.write('\n');
-        }
+      renderedRows.add(_renderRow(rowCells, effectiveWidths, i, b, sb));
+    }
+
+    // Determine visible row range based on yOffset and height
+    _firstVisibleRowIndex = _yOffset.clamp(0, _data.rows);
+    _lastVisibleRowIndex = _data.rows > 0 ? _data.rows - 1 : -1;
+
+    if (_height > 0) {
+      // Calculate how many lines borders/header take
+      var fixedLines = 0;
+      if (_borderTop && b.top.isNotEmpty) fixedLines++;
+      if (hasHeaders) {
+        fixedLines += headerStr!.split('\n').length;
+        if (headerSepStr != null) fixedLines++;
       }
+      if (_borderBottom && b.bottom.isNotEmpty) fixedLines++;
+
+      // Available lines for data rows
+      final availableForRows = _height - fixedLines;
+      if (availableForRows > 0) {
+        var usedLines = 0;
+        var lastVisible = _firstVisibleRowIndex - 1;
+        for (var i = _firstVisibleRowIndex; i < renderedRows.length; i++) {
+          final rowLines = renderedRows[i].split('\n').length;
+          final separatorLines =
+              (i > _firstVisibleRowIndex && rowSeparator != null) ? 1 : 0;
+          if (usedLines + rowLines + separatorLines > availableForRows) break;
+          usedLines += rowLines + separatorLines;
+          lastVisible = i;
+        }
+        _lastVisibleRowIndex = lastVisible;
+      } else {
+        _lastVisibleRowIndex = _firstVisibleRowIndex - 1;
+      }
+    }
+
+    // Build final output
+    final buf = StringBuffer();
+
+    // Top border
+    if (_borderTop && b.top.isNotEmpty) {
+      buf.write(_renderTopBorder(effectiveWidths, b, sb));
+      buf.write('\n');
+    }
+
+    // Header
+    if (headerStr != null) {
+      buf.write(headerStr);
+      buf.write('\n');
+      if (headerSepStr != null) {
+        buf.write(headerSepStr);
+        buf.write('\n');
+      }
+    }
+
+    // Visible data rows
+    for (var i = _firstVisibleRowIndex;
+        i <= _lastVisibleRowIndex && i < renderedRows.length;
+        i++) {
+      if (i > _firstVisibleRowIndex && rowSeparator != null) {
+        buf.write(rowSeparator);
+        buf.write('\n');
+      }
+      buf.write(renderedRows[i]);
+      if (i < _lastVisibleRowIndex || (_borderBottom && b.bottom.isNotEmpty)) {
+        buf.write('\n');
+      }
+    }
+
+    // Overflow indicator
+    if (_height > 0 && _lastVisibleRowIndex < _data.rows - 1) {
+      // Show overflow "…" row
+      final overflowCount = _data.rows - 1 - _lastVisibleRowIndex;
+      final overflowText = '\u2026 $overflowCount more';
+      if (_borderLeft) buf.write(sb(b.left));
+      final totalContentW = effectiveWidths.fold(0, (a, b) => a + b) +
+          effectiveWidths.length * 2 +
+          (_borderColumn ? math.max(0, effectiveWidths.length - 1) * bw : 0);
+      final padNeeded = totalContentW - stringWidth(overflowText);
+      buf.write(' $overflowText');
+      if (padNeeded > 0) buf.write(' ' * padNeeded);
+      if (_borderRight) buf.write(sb(b.right));
+      buf.write('\n');
     }
 
     // Bottom border
     if (_borderBottom && b.bottom.isNotEmpty) {
-      buf.write('\n');
       buf.write(_renderBottomBorder(effectiveWidths, b, sb));
     }
 
-    var result = buf.toString();
-
-    // Apply height constraint with yOffset
-    if (_height > 0 || _yOffset > 0) {
-      final lines = result.split('\n');
-      final start = _yOffset.clamp(0, lines.length);
-      final end =
-          _height > 0 ? (start + _height).clamp(0, lines.length) : lines.length;
-      result = lines.sublist(start, end).join('\n');
-    }
-
-    return result;
+    return buf.toString();
   }
 
   int _getNumColumns() {
@@ -312,7 +391,7 @@ class Table {
       }
     }
 
-    // Use joinHorizontal for multi-line cells
+    // Use multi-line rendering for multi-line cells
     final hasMultiLine = styledCells.any((c) => c.contains('\n'));
     if (hasMultiLine) {
       return _renderMultiLineRow(styledCells, widths, b, sb);

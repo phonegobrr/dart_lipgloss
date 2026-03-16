@@ -51,8 +51,8 @@ List<int> optimizedWidths(
     // Expand to fill
     return _expandWidths(naturalWidths, availableWidth);
   } else {
-    // Shrink to fit
-    return _shrinkWidths(
+    // Shrink to fit using three-phase algorithm
+    return _shrinkWidthsThreePhase(
         naturalWidths, contentWidths, availableWidth, numColumns);
   }
 }
@@ -76,8 +76,11 @@ List<int> _expandWidths(List<int> widths, int available) {
   return result;
 }
 
-/// Shrink columns to fit, using median-based smart cropping.
-List<int> _shrinkWidths(
+/// Three-phase shrink algorithm matching Go lipgloss v2:
+/// Phase 1: shrinkBiggestColumns(veryBigOnly=true) - only shrink columns > 2x median
+/// Phase 2: shrinkToMedian() - shrink widest column to its median
+/// Phase 3: shrinkBiggestColumns(veryBigOnly=false) - shrink any widest column by 1
+List<int> _shrinkWidthsThreePhase(
   List<int> naturalWidths,
   List<List<int>> contentWidths,
   int available,
@@ -86,29 +89,29 @@ List<int> _shrinkWidths(
   final result = List<int>.from(naturalWidths);
   var total = sum(result);
 
-  // Iteratively shrink the widest column
+  // Phase 1: Shrink very big columns (> 2x median of their content)
   while (total > available) {
-    // Find the widest column
-    var widestIdx = 0;
-    var widestVal = 0;
-    for (var i = 0; i < result.length; i++) {
-      if (result[i] > widestVal) {
-        widestVal = result[i];
-        widestIdx = i;
-      }
-    }
-
+    final widestIdx = _findWidest(result);
     if (result[widestIdx] <= 1) break;
 
-    // Calculate median for this column
-    final colWidths = <int>[];
-    for (final rowWidths in contentWidths) {
-      if (widestIdx < rowWidths.length) {
-        colWidths.add(rowWidths[widestIdx]);
-      }
-    }
+    final med = _columnMedian(contentWidths, widestIdx);
+    // "Very big" means > 2x median
+    if (result[widestIdx] <= med * 2) break;
 
-    final med = median(colWidths).ceil();
+    final target = math.max(med * 2, 1);
+    final reduction = math.min(result[widestIdx] - target, total - available);
+    if (reduction <= 0) break;
+
+    result[widestIdx] -= reduction;
+    total -= reduction;
+  }
+
+  // Phase 2: Shrink to median
+  while (total > available) {
+    final widestIdx = _findWidest(result);
+    if (result[widestIdx] <= 1) break;
+
+    final med = _columnMedian(contentWidths, widestIdx);
     final target = math.max(med, 1);
     final reduction = math.min(result[widestIdx] - target, total - available);
 
@@ -116,6 +119,7 @@ List<int> _shrinkWidths(
       result[widestIdx] -= reduction;
       total -= reduction;
     } else {
+      // Phase 3: Shrink widest by 1
       result[widestIdx]--;
       total--;
     }
@@ -127,4 +131,26 @@ List<int> _shrinkWidths(
   }
 
   return result;
+}
+
+int _findWidest(List<int> widths) {
+  var widestIdx = 0;
+  var widestVal = 0;
+  for (var i = 0; i < widths.length; i++) {
+    if (widths[i] > widestVal) {
+      widestVal = widths[i];
+      widestIdx = i;
+    }
+  }
+  return widestIdx;
+}
+
+int _columnMedian(List<List<int>> contentWidths, int col) {
+  final colWidths = <int>[];
+  for (final rowWidths in contentWidths) {
+    if (col < rowWidths.length) {
+      colWidths.add(rowWidths[col]);
+    }
+  }
+  return median(colWidths).ceil();
 }

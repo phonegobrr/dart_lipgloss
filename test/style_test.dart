@@ -119,6 +119,21 @@ void main() {
       expect(s.getBold, isFalse);
     });
 
+    test('getHyperlinkFull returns link and params', () {
+      final s = Style().setHyperlink('https://example.com', {'id': 'abc'});
+      final full = s.getHyperlinkFull;
+      expect(full.link, equals('https://example.com'));
+      expect(full.params, isNotNull);
+      expect(full.params!['id'], equals('abc'));
+    });
+
+    test('getHyperlinkFull returns nulls when unset', () {
+      final s = const Style();
+      final full = s.getHyperlinkFull;
+      expect(full.link, isNull);
+      expect(full.params, isNull);
+    });
+
     test('inherit copies unset properties', () {
       final parent = Style().bold().foreground(lipColor('#FF0000'));
       final child = Style().italic().inherit(parent);

@@ -640,6 +640,10 @@ class Style {
   String? get getHyperlink => _props.has(PropKey.hyperlink) ? _hyperlink : null;
   Map<String, String>? get getHyperlinkParams =>
       _props.has(PropKey.hyperlinkParams) ? _hyperlinkParams : null;
+
+  /// Combined hyperlink getter returning both link URL and params.
+  ({String? link, Map<String, String>? params}) get getHyperlinkFull =>
+      (link: getHyperlink, params: getHyperlinkParams);
   String? get getValue => _value;
   String get getPaddingChar =>
       _props.has(PropKey.paddingChar) ? _paddingChar : ' ';

@@ -4,14 +4,15 @@
 
 /// Regex matching all ANSI escape sequences including CSI, OSC, and single-char escapes.
 final _ansiPattern = RegExp(
-  r'\x1B'
-  r'(?:'
-  r'[@-Z\\-_]' // Single-char escapes (Fe)
+  // OSC sequences: ESC ] ... (BEL | ESC \)
+  r'\x1B\].*?(?:\x07|\x1B\\)'
   r'|'
-  r'\[[0-?]*[ -/]*[@-~]' // CSI sequences
+  // CSI sequences: ESC [ ... final byte
+  r'\x1B\[[0-?]*[ -/]*[@-~]'
   r'|'
-  r'\].*?(?:\x07|\x1B\\)' // OSC sequences (terminated by BEL or ST)
-  r')',
+  // Single-char Fe escapes: ESC followed by a byte in 0x40-0x5F
+  // (excluding [ and ] which are handled above)
+  r'\x1B[@-Z^-_\\]',
 );
 
 /// Strip all ANSI escape sequences from [s].

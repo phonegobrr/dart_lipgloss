@@ -28,7 +28,7 @@ Every upstream public feature is listed with its status.
 | Per-side border foreground/background | Implemented |
 | Border foreground blend (gradient) | Implemented |
 | Border foreground blend offset | Implemented |
-| Inline mode | Implemented (inline() + inlineMode() alias) |
+| Inline mode | Implemented (inline()) |
 | TabWidth (incl. 0=remove, -1=preserve) | Implemented |
 | UnderlineSpaces/StrikethroughSpaces | Implemented |
 | ColorWhitespace | Implemented |

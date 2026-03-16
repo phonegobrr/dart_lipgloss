@@ -522,9 +522,6 @@ class Style {
         inline: v,
       );
 
-  /// Alias for [inline] for backward compatibility.
-  Style inlineMode([bool v = true]) => inline(v);
-
   Style tabWidth(int w) => _copyWith(
         props: _props.set(PropKey.tabWidth),
         tabWidth: w,
@@ -934,7 +931,7 @@ class Style {
 
     // Inline, tab width
     if (!_props.has(PropKey.inline) && other._props.has(PropKey.inline)) {
-      s = s.inlineMode(other._inline);
+      s = s.inline(other._inline);
     }
     if (!_props.has(PropKey.tabWidth) && other._props.has(PropKey.tabWidth)) {
       s = s.tabWidth(other._tabWidth);

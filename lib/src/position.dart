@@ -74,12 +74,12 @@ String placeHorizontal(
 
     if (leftPad > 0) {
       final leftStr = renderWhitespace(leftPad, ws.chars);
-      buf.write(ws.style != null ? ws.style!.render([leftStr]) : leftStr);
+      buf.write(ws.style != null ? ws.style!.render(leftStr) : leftStr);
     }
     buf.write(line);
     if (rightPad > 0) {
       final rightStr = renderWhitespace(rightPad, ws.chars);
-      buf.write(ws.style != null ? ws.style!.render([rightStr]) : rightStr);
+      buf.write(ws.style != null ? ws.style!.render(rightStr) : rightStr);
     }
 
     if (i < lines.length - 1) buf.write('\n');
@@ -118,7 +118,7 @@ String placeVertical(
 
   final emptyLineRaw = renderWhitespace(maxWidth, ws.chars);
   final emptyLine =
-      ws.style != null ? ws.style!.render([emptyLineRaw]) : emptyLineRaw;
+      ws.style != null ? ws.style!.render(emptyLineRaw) : emptyLineRaw;
 
   final buf = StringBuffer();
   for (var i = 0; i < topPad; i++) {

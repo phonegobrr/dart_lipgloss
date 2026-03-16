@@ -132,7 +132,7 @@ void main() {
     });
 
     test('inline mode strips newlines', () {
-      final result = Style().inlineMode().render('line1\nline2');
+      final result = Style().inline().render('line1\nline2');
       expect(result, isNot(contains('\n')));
     });
 

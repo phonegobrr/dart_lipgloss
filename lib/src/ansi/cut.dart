@@ -56,7 +56,31 @@ String cut(String s, int start, int end) {
       for (final grapheme in graphemes) {
         if (visiblePos >= end) break;
 
-        final w = stringWidth(grapheme);
+        // Compute true display width for this grapheme.
+        // stringWidth() may return 1 for zero-width-only clusters,
+        // so we check the base rune directly.
+        final runes = grapheme.runes;
+        int w;
+        if (runes.length == 1) {
+          w = runeWidth(runes.first);
+        } else {
+          // Multi-rune grapheme: find first non-zero-width rune
+          w = 0;
+          for (final r in runes) {
+            final rw = runeWidth(r);
+            if (rw > 0) {
+              w = rw;
+              break;
+            }
+          }
+          // Emoji ZWJ sequences that start with visible codepoints
+          if (w == 0 && runes.first >= 0x1F000) {
+            w = 2;
+          }
+        }
+
+        // Skip zero-width graphemes (pure combining marks, control chars)
+        if (w == 0) continue;
 
         if (visiblePos + w > start && visiblePos < end) {
           // First visible char: emit pending state
@@ -106,15 +130,27 @@ void _handleAnsiSegment({
   required String? activeOscOpen,
   required void Function(String?) onActiveOscChanged,
 }) {
+  final inRange = visiblePos >= start && visiblePos < end;
+
   // CSI/SGR sequences
   if (seq.startsWith('\x1b[')) {
     final isSgrReset = seq == '\x1b[0m' || seq == '\x1b[m';
     final isSgr = seq.endsWith('m');
-    // Selective resets (e.g. \x1b[22m, \x1b[39m) are SGR but not full resets
 
-    if (visiblePos >= start && visiblePos < end) {
-      buf.write(seq);
-      if (isSgr) {
+    if (isSgr) {
+      if (inRange && wroteVisibleChar) {
+        // Already writing visible content — emit directly
+        buf.write(seq);
+        if (isSgrReset) {
+          pendingSgr.clear();
+          onPendingSgrChanged(false);
+        } else {
+          pendingSgr.write(seq);
+          onPendingSgrChanged(true);
+        }
+      } else {
+        // Before range or in range but before first visible char —
+        // accumulate into pending state (will be replayed on first visible char)
         if (isSgrReset) {
           pendingSgr.clear();
           onPendingSgrChanged(false);
@@ -123,14 +159,9 @@ void _handleAnsiSegment({
           onPendingSgrChanged(true);
         }
       }
-    } else if (visiblePos < start && isSgr) {
-      if (isSgrReset) {
-        pendingSgr.clear();
-        onPendingSgrChanged(false);
-      } else {
-        pendingSgr.write(seq);
-        onPendingSgrChanged(true);
-      }
+    } else if (inRange && wroteVisibleChar) {
+      // Non-SGR CSI in range after visible content — emit directly
+      buf.write(seq);
     }
     return;
   }
@@ -139,23 +170,24 @@ void _handleAnsiSegment({
   if (seq.startsWith('\x1b]8;')) {
     final isClose = seq == '\x1b]8;;\x1b\\' || seq == '\x1b]8;;\x07';
     if (isClose) {
-      if (visiblePos >= start && visiblePos < end) {
+      if (inRange && wroteVisibleChar) {
         buf.write(seq);
       }
       onActiveOscChanged(null);
     } else {
-      if (visiblePos >= start && visiblePos < end) {
+      if (inRange && wroteVisibleChar) {
         buf.write(seq);
         onActiveOscChanged(seq);
-      } else if (visiblePos < start) {
+      } else {
+        // Before range or before first visible char — remember it
         onActiveOscChanged(seq);
       }
     }
     return;
   }
 
-  // Other ANSI — pass through if in range
-  if (visiblePos >= start && visiblePos < end) {
+  // Other ANSI — pass through if in range and after visible content
+  if (inRange && wroteVisibleChar) {
     buf.write(seq);
   }
 }

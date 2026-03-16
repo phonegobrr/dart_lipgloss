@@ -243,12 +243,33 @@ void main() {
     });
 
     test('selective SGR reset does not leave spurious reset', () {
-      // \x1b[39m is "default foreground" — not a full reset
       final result = cut('\x1b[39ma', 0, 1);
       expect(result, contains('a'));
-      // Should have the selective reset and close
       expect(result, contains('\x1b[39m'));
       expect(result, endsWith('\x1b[0m'));
+    });
+
+    test('in-range SGR reset before visible content not emitted bare', () {
+      // \x1b[31mabc\x1b[0mdef — cut(3,6) should give 'def', not '\x1b[0mdef'
+      final result = cut('\x1b[31mabc\x1b[0mdef', 3, 6);
+      expect(result, equals('def'));
+    });
+
+    test('in-range OSC close before visible content not emitted bare', () {
+      final input = '\x1b]8;;https://example.com\x1b\\abc\x1b]8;;\x1b\\def';
+      final result = cut(input, 3, 6);
+      expect(result, equals('def'));
+    });
+
+    test('CRLF not consumed as combining', () {
+      final result = cut('\r\nb', 0, 1);
+      expect(result, equals('b'));
+    });
+
+    test('leading combining marks without base skipped', () {
+      // standalone combining marks with no base, followed by 'a'
+      final result = cut('\u0301\u0302a', 0, 1);
+      expect(result, equals('a'));
     });
   });
 }

@@ -24,7 +24,6 @@ String renderTree(
 
   for (var i = 0; i < children.length; i++) {
     final child = children[i];
-    final isLast = i == children.length - 1;
 
     // Get enumerator string
     final enumStr = enumerator(children, i);

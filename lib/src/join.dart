@@ -2,8 +2,6 @@
 // Original: https://github.com/charmbracelet/lipgloss
 // Licensed under MIT by Charmbracelet, Inc.
 
-import 'dart:math' as math;
-
 import 'ansi/width.dart';
 
 /// Join multi-line text blocks side-by-side with vertical alignment.

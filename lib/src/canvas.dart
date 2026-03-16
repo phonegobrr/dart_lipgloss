@@ -3,7 +3,6 @@
 // Licensed under MIT by Charmbracelet, Inc.
 
 import 'ansi/sgr.dart';
-import 'ansi/width.dart';
 
 /// A single terminal cell.
 class Cell {

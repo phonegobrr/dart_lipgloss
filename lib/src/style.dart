@@ -7,7 +7,6 @@ import 'package:meta/meta.dart';
 import 'align.dart';
 import 'ansi/hyperlink.dart' as hl;
 import 'ansi/sgr.dart';
-import 'ansi/strip.dart';
 import 'ansi/truncate.dart' as trunc;
 import 'ansi/width.dart';
 import 'border.dart';
@@ -688,8 +687,9 @@ class Style {
   /// This is a pure function — no I/O, no terminal detection.
   String render([String text = '']) {
     // If _value is set, prepend it
-    final str = _value != null
-        ? (text.isEmpty ? _value! : '$_value$text')
+    final v = _value;
+    final str = v != null
+        ? (text.isEmpty ? v : '$v$text')
         : text;
     return _renderPipeline(str);
   }
@@ -699,7 +699,7 @@ class Style {
 
     // 1. Apply transform function
     if (_props.has(PropKey.transform) && _transform != null) {
-      str = _transform!(str);
+      str = _transform(str);
     }
 
     // 2. Tab conversion
@@ -1193,15 +1193,17 @@ class Style {
       return (top: top, right: top, bottom: top, left: top);
     }
     if (bottom == null && left == null) {
-      // 2 args = vert/horiz
-      return (top: top, right: right!, bottom: top, left: right!);
+      // 2 args = vert/horiz — right is non-null since first check failed
+      final r = right!;
+      return (top: top, right: r, bottom: top, left: r);
     }
     if (left == null) {
-      // 3 args = top/horiz/bottom
-      return (top: top, right: right!, bottom: bottom!, left: right!);
+      // 3 args = top/horiz/bottom — right and bottom are non-null
+      final r = right!;
+      return (top: top, right: r, bottom: bottom!, left: r);
     }
     // 4 args = all four
-    return (top: top, right: right!, bottom: bottom!, left: left!);
+    return (top: top, right: right!, bottom: bottom!, left: left);
   }
 }
 

@@ -4,7 +4,6 @@
 
 import 'dart:math' as math;
 
-import '../ansi/width.dart';
 import 'util.dart';
 
 /// Calculate optimal column widths given content widths and constraints.

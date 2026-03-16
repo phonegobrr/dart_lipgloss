@@ -3,7 +3,6 @@
 // Licensed under MIT by Charmbracelet, Inc.
 
 import 'ansi/strip.dart';
-import 'ansi/width.dart';
 import 'canvas.dart';
 import 'size.dart' as sz;
 

@@ -2,8 +2,6 @@
 // Original: https://github.com/charmbracelet/lipgloss
 // Licensed under MIT by Charmbracelet, Inc.
 
-import 'tree.dart';
-
 /// Abstract children interface for tree items.
 abstract class Children {
   int get length;

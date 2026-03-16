@@ -120,7 +120,6 @@ String hardWrap(String s, int limit) {
     }
 
     final stripped = stripAnsi(line);
-    var pos = 0;
     final buf = StringBuffer();
     var currentWidth = 0;
 
@@ -136,7 +135,6 @@ String hardWrap(String s, int limit) {
 
       buf.write(char);
       currentWidth += w;
-      pos++;
     }
 
     if (buf.isNotEmpty) {

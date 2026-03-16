@@ -82,7 +82,6 @@ String _truncateRaw(String s, int targetWidth) {
     }
 
     // Regular character - check its width
-    final char = String.fromCharCode(codeUnits[i]);
     // Handle surrogate pairs
     int codePoint;
     if (codeUnits[i] >= 0xD800 && codeUnits[i] <= 0xDBFF && i + 1 < codeUnits.length) {

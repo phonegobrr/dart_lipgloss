@@ -3,8 +3,6 @@
 // Licensed under MIT by Charmbracelet, Inc.
 
 import '../style.dart';
-import '../tree/tree.dart';
-import '../tree/enumerator.dart' as tree_enum;
 import 'enumerator.dart';
 
 /// A styled list for terminal rendering.

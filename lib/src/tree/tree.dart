@@ -8,7 +8,7 @@ import 'renderer.dart';
 
 /// A tree for terminal rendering.
 class Tree {
-  String _rootValue;
+  final String _rootValue;
   final List<Object> _children = [];
   EnumeratorFunc _enumerator = defaultEnumerator;
   IndenterFunc _indenter = defaultIndenter;

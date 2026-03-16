@@ -7,10 +7,7 @@ import '../ansi/sgr.dart';
 import '../border.dart';
 import '../color.dart';
 import '../style.dart';
-import '../wrap.dart';
 import 'resizing.dart';
-import 'rows.dart';
-import 'util.dart';
 
 /// Constant for header row in StyleFunc.
 const int headerRow = -1;
@@ -18,7 +15,7 @@ const int headerRow = -1;
 /// A styled, auto-resizing terminal table.
 class Table {
   List<String> _headers = [];
-  List<List<String>> _rows = [];
+  final List<List<String>> _rows = [];
   Border _border = normalBorder;
   Style _borderStyle = const Style();
   bool _borderRow = false;
@@ -30,8 +27,11 @@ class Table {
   bool _borderRight = true;
   Style Function(int row, int col)? _styleFunc;
   int _width = 0;
+  // ignore: unused_field
   int _height = 0;
+  // ignore: unused_field
   int _yOffset = 0;
+  // ignore: unused_field
   bool _wrap = false;
 
   Table();
@@ -160,7 +160,6 @@ class Table {
     }
 
     // Calculate column widths
-    final borderW = _borderColumn ? stringWidth(b.left) : 0;
     final colWidths = optimizedWidths(
       contentWidths,
       _width,

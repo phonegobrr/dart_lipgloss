@@ -4,3 +4,4 @@ library dart_lipgloss.tree;
 export 'src/tree/tree.dart';
 export 'src/tree/children.dart';
 export 'src/tree/enumerator.dart';
+export 'src/tree/renderer.dart' show TreeRenderer;

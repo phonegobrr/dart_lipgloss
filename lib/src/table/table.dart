@@ -3,12 +3,13 @@
 // Licensed under MIT by Charmbracelet, Inc.
 
 import '../ansi/width.dart';
-import '../ansi/sgr.dart';
 import '../border.dart';
-import '../color.dart';
+import '../join.dart';
 import '../style.dart';
 import '../wrap.dart' as wrap_lib;
+import '../ansi/truncate.dart' as trunc;
 import 'resizing.dart';
+import 'rows.dart';
 
 /// Constant for header row in StyleFunc.
 const int headerRow = -1;
@@ -16,9 +17,10 @@ const int headerRow = -1;
 /// A styled, auto-resizing terminal table.
 class Table {
   List<String> _headers = [];
-  final List<List<String>> _rows = [];
+  Data _data = StringData([]);
   Border _border = normalBorder;
   Style _borderStyle = const Style();
+  Style _baseStyle = const Style();
   bool _borderRow = false;
   bool _borderColumn = false;
   bool _borderHeader = true;
@@ -30,7 +32,7 @@ class Table {
   int _width = 0;
   int _height = 0;
   int _yOffset = 0;
-  bool _wrap = false;
+  bool _wrap = true;
 
   Table();
 
@@ -42,13 +44,38 @@ class Table {
 
   /// Add a single row.
   Table row(List<String> r) {
-    _rows.add(r);
+    if (_data is StringData) {
+      (_data as StringData).addRow(r);
+    }
     return this;
   }
 
   /// Add multiple rows.
   Table rows(List<List<String>> r) {
-    _rows.addAll(r);
+    for (final row in r) {
+      this.row(row);
+    }
+    return this;
+  }
+
+  /// Set data source.
+  Table data(Data d) {
+    _data = d;
+    return this;
+  }
+
+  /// Get the data source.
+  Data get getData => _data;
+
+  /// Clear all rows.
+  Table clearRows() {
+    _data = StringData([]);
+    return this;
+  }
+
+  /// Set the base style.
+  Table baseStyle(Style s) {
+    _baseStyle = s;
     return this;
   }
 
@@ -131,15 +158,10 @@ class Table {
     final b = _border;
 
     // Build border styling
-    final borderFg = _borderStyle.getForeground;
-    final borderBg = _borderStyle.getBackground;
-    final borderSgr = AnsiStyle();
-    if (borderFg is! NoColor) borderSgr.setForeground(borderFg);
-    if (borderBg is! NoColor) borderSgr.setBackground(borderBg);
-    final hasBorderSgr = borderSgr.hasStyle;
-
-    String sb(String s) =>
-        hasBorderSgr && s.isNotEmpty ? borderSgr.styled(s) : s;
+    String sb(String s) {
+      if (s.isEmpty) return s;
+      return _borderStyle.render(s);
+    }
 
     // Measure content widths
     final contentWidths = <List<int>>[];
@@ -151,10 +173,10 @@ class Table {
       }
       contentWidths.add(headerWidths);
     }
-    for (final row in _rows) {
+    for (var row = 0; row < _data.rows; row++) {
       final rowWidths = <int>[];
       for (var col = 0; col < numCols; col++) {
-        rowWidths.add(col < row.length ? stringWidth(row[col]) : 0);
+        rowWidths.add(stringWidth(_data.at(row, col)));
       }
       contentWidths.add(rowWidths);
     }
@@ -196,9 +218,13 @@ class Table {
     }
 
     // Data rows
-    for (var i = 0; i < _rows.length; i++) {
-      buf.write(_renderRow(_rows[i], effectiveWidths, i, b, sb));
-      if (i < _rows.length - 1) {
+    for (var i = 0; i < _data.rows; i++) {
+      final rowCells = <String>[];
+      for (var col = 0; col < numCols; col++) {
+        rowCells.add(_data.at(i, col));
+      }
+      buf.write(_renderRow(rowCells, effectiveWidths, i, b, sb));
+      if (i < _data.rows - 1) {
         buf.write('\n');
         if (_borderRow && b.middle.isNotEmpty) {
           buf.write(_renderMiddleBorder(effectiveWidths, b, sb));
@@ -229,9 +255,7 @@ class Table {
 
   int _getNumColumns() {
     var cols = _headers.length;
-    for (final row in _rows) {
-      if (row.length > cols) cols = row.length;
-    }
+    if (_data.columns > cols) cols = _data.columns;
     return cols;
   }
 
@@ -254,41 +278,80 @@ class Table {
     Border b,
     String Function(String) sb,
   ) {
-    final buf = StringBuffer();
-    if (_borderLeft) buf.write(sb(b.left));
+    // Build styled cells for multi-line joining
+    final styledCells = <String>[];
 
     for (var col = 0; col < widths.length; col++) {
       var cellContent = col < cells.length ? cells[col] : '';
       final width = widths[col];
 
-      // Word wrap if enabled
-      if (_wrap && width > 0 && stringWidth(cellContent) > width) {
-        cellContent = wrap_lib.wordWrap(cellContent, width);
+      // Word wrap or truncate
+      if (width > 0 && stringWidth(cellContent) > width) {
+        if (_wrap) {
+          cellContent = wrap_lib.wordWrap(cellContent, width);
+        } else {
+          cellContent = trunc.truncate(cellContent, width, '\u2026');
+        }
       }
 
-      // Apply style func if set
+      // Apply style func (inheriting from base style)
       var styled = cellContent;
       if (_styleFunc != null) {
-        final style = _styleFunc!(rowIdx, col);
+        final style = _styleFunc!(rowIdx, col).inherit(_baseStyle);
         styled = style.render(cellContent);
+      } else if (_baseStyle != const Style()) {
+        styled = _baseStyle.render(cellContent);
       }
 
       // Pad to width
       final cellWidth = stringWidth(styled);
       final padNeeded = width - cellWidth;
       if (padNeeded > 0) {
-        buf.write(' $styled${' ' * padNeeded} ');
+        styledCells.add(' $styled${' ' * padNeeded} ');
       } else {
-        buf.write(' $styled ');
-      }
-
-      if (col < widths.length - 1 && _borderColumn) {
-        buf.write(sb(b.middle.isNotEmpty ? b.right : b.left));
+        styledCells.add(' $styled ');
       }
     }
 
-    if (_borderRight) buf.write(sb(b.right));
-    return buf.toString();
+    // Use joinHorizontal for multi-line cells
+    final hasMultiLine = styledCells.any((c) => c.contains('\n'));
+    if (hasMultiLine) {
+      return _renderMultiLineRow(styledCells, widths, b, sb);
+    }
+
+    // Single-line row
+    final rowBuf = StringBuffer();
+    if (_borderLeft) rowBuf.write(sb(b.left));
+
+    for (var col = 0; col < styledCells.length; col++) {
+      rowBuf.write(styledCells[col]);
+      if (col < styledCells.length - 1 && _borderColumn) {
+        rowBuf.write(sb(b.middle.isNotEmpty ? b.middle : b.left));
+      }
+    }
+
+    if (_borderRight) rowBuf.write(sb(b.right));
+    return rowBuf.toString();
+  }
+
+  String _renderMultiLineRow(
+    List<String> styledCells,
+    List<int> widths,
+    Border b,
+    String Function(String) sb,
+  ) {
+    // Compose multi-line cells using joinHorizontal
+    final composedRow = joinHorizontal(0.0, styledCells);
+    final lines = composedRow.split('\n');
+
+    final rowBuf = StringBuffer();
+    for (var lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+      if (_borderLeft) rowBuf.write(sb(b.left));
+      rowBuf.write(lines[lineIdx]);
+      if (_borderRight) rowBuf.write(sb(b.right));
+      if (lineIdx < lines.length - 1) rowBuf.write('\n');
+    }
+    return rowBuf.toString();
   }
 
   String _renderTopBorder(

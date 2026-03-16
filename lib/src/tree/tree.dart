@@ -8,7 +8,7 @@ import 'renderer.dart';
 
 /// A tree for terminal rendering.
 class Tree {
-  final String _rootValue;
+  String _rootValue;
   final List<Object> _children = [];
   EnumeratorFunc _enumerator = defaultEnumerator;
   IndenterFunc _indenter = defaultIndenter;
@@ -18,18 +18,45 @@ class Tree {
   Style _indenterStyle = const Style();
   Style Function(List<Object> children, int i)? _itemStyleFunc;
   Style Function(List<Object> children, int i)? _enumeratorStyleFunc;
+  Style Function(List<Object> children, int i)? _indenterStyleFunc;
+  bool _hidden = false;
+  int _offsetStart = 0;
+  int _offsetEnd = 0;
+  int _width = 0;
+
+  // Per-subtree custom renderer (4s)
+  TreeRenderer? customRenderer;
 
   Tree.root(Object name) : _rootValue = name.toString();
 
+  /// Set the root value.
+  Tree root(Object r) {
+    _rootValue = r.toString();
+    return this;
+  }
+
   /// Add a child item. Item can be a String, Tree, or TreeLeaf.
+  /// When a subtree has no root value, auto-parent it to the previous sibling (4q).
   Tree child(Object item) {
+    if (item is Tree && item._rootValue.isEmpty && _children.isNotEmpty) {
+      // Auto-nest: attach as children of previous sibling
+      final prev = _children.last;
+      if (prev is Tree) {
+        for (final c in item.getChildren()) {
+          prev.child(c);
+        }
+        return this;
+      }
+    }
     _children.add(item);
     return this;
   }
 
   /// Add multiple child items.
   Tree children(List<Object> items) {
-    _children.addAll(items);
+    for (final item in items) {
+      child(item);
+    }
     return this;
   }
 
@@ -81,32 +108,85 @@ class Tree {
     return this;
   }
 
+  /// Set a per-item indenter style function.
+  Tree indenterStyleFunc(Style Function(List<Object> children, int i) fn) {
+    _indenterStyleFunc = fn;
+    return this;
+  }
+
+  /// Hide/show this tree node.
+  Tree hide([bool v = true]) {
+    _hidden = v;
+    return this;
+  }
+
+  /// Whether this tree is hidden.
+  bool get hidden => _hidden;
+
+  /// Set offset for visible children (start, end).
+  Tree offset(int start, int end) {
+    _offsetStart = start;
+    _offsetEnd = end;
+    return this;
+  }
+
+  /// Set width for padding lines.
+  Tree width(int w) {
+    _width = w;
+    return this;
+  }
+
+  /// Set a custom renderer for this subtree.
+  Tree renderer(TreeRenderer r) {
+    customRenderer = r;
+    return this;
+  }
+
   /// Get the root value.
   String get rootValue => _rootValue;
 
-  /// Get the children list.
-  List<Object> getChildren() => List<Object>.unmodifiable(_children);
+  /// Get the children list, applying offset.
+  List<Object> getChildren() {
+    if (_offsetStart == 0 && _offsetEnd == 0) {
+      return List<Object>.unmodifiable(_children);
+    }
+    final end =
+        (_children.length - _offsetEnd).clamp(_offsetStart, _children.length);
+    if (_offsetStart >= end) return const [];
+    return List<Object>.unmodifiable(_children.sublist(_offsetStart, end));
+  }
+
+  /// Get the raw children (no offset applied).
+  List<Object> get rawChildren => List<Object>.unmodifiable(_children);
 
   /// Render the tree to a string.
   String render() {
+    if (_hidden) return '';
+
     final buf = StringBuffer();
 
     // Render root
     buf.write(_rootStyle.render(_rootValue));
 
-    if (_children.isNotEmpty) {
+    final visibleChildren = getChildren();
+    if (visibleChildren.isNotEmpty) {
       buf.write('\n');
       buf.write(renderTree(
-        this,
+        visibleChildren,
         '',
-        _enumerator,
-        _indenter,
-        _rootStyle,
-        _itemStyle,
-        _enumeratorStyle,
-        _indenterStyle,
-        _itemStyleFunc,
-        _enumeratorStyleFunc,
+        customRenderer ??
+            TreeRenderer(
+              enumerator: _enumerator,
+              indenter: _indenter,
+              rootStyle: _rootStyle,
+              itemStyle: _itemStyle,
+              enumeratorStyle: _enumeratorStyle,
+              indenterStyle: _indenterStyle,
+              itemStyleFunc: _itemStyleFunc,
+              enumeratorStyleFunc: _enumeratorStyleFunc,
+              indenterStyleFunc: _indenterStyleFunc,
+            ),
+        _width,
       ));
     }
 
@@ -120,7 +200,18 @@ class Tree {
 /// A leaf node (no children).
 class TreeLeaf {
   final String value;
-  const TreeLeaf(this.value);
+  bool _hidden = false;
+
+  TreeLeaf(this.value);
+
+  /// Hide/show this leaf.
+  TreeLeaf hide([bool v = true]) {
+    _hidden = v;
+    return this;
+  }
+
+  /// Whether this leaf is hidden.
+  bool get hidden => _hidden;
 
   @override
   String toString() => value;

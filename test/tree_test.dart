@@ -52,7 +52,7 @@ void main() {
 
   group('TreeLeaf', () {
     test('toString returns value', () {
-      expect(const TreeLeaf('hello').toString(), equals('hello'));
+      expect(TreeLeaf('hello').toString(), equals('hello'));
     });
   });
 

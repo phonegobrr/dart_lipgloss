@@ -18,7 +18,12 @@ abstract class Data {
 class StringData implements Data {
   final List<List<String>> _data;
 
-  StringData(this._data);
+  StringData(List<List<String>> data) : _data = List<List<String>>.from(data);
+
+  /// Add a row.
+  void addRow(List<String> row) {
+    _data.add(row);
+  }
 
   @override
   String at(int row, int cell) {

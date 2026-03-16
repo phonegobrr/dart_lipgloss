@@ -4,7 +4,6 @@
 
 import '../ansi/width.dart';
 import '../border.dart';
-import '../join.dart';
 import '../style.dart';
 import '../wrap.dart' as wrap_lib;
 import '../ansi/truncate.dart' as trunc;
@@ -340,16 +339,40 @@ class Table {
     Border b,
     String Function(String) sb,
   ) {
-    // Compose multi-line cells using joinHorizontal
-    final composedRow = joinHorizontal(0.0, styledCells);
-    final lines = composedRow.split('\n');
+    // Split each cell into lines and find max height
+    final cellLines = <List<String>>[];
+    var maxLines = 0;
+    for (var col = 0; col < styledCells.length; col++) {
+      final lines = styledCells[col].split('\n');
+      cellLines.add(lines);
+      if (lines.length > maxLines) maxLines = lines.length;
+    }
 
     final rowBuf = StringBuffer();
-    for (var lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+    for (var lineIdx = 0; lineIdx < maxLines; lineIdx++) {
       if (_borderLeft) rowBuf.write(sb(b.left));
-      rowBuf.write(lines[lineIdx]);
+
+      for (var col = 0; col < cellLines.length; col++) {
+        if (lineIdx < cellLines[col].length) {
+          final line = cellLines[col][lineIdx];
+          final lineW = stringWidth(line);
+          // Pad to cell width (+2 for cell padding)
+          final cellWidth = widths[col] + 2;
+          final pad = cellWidth - lineW;
+          rowBuf.write(line);
+          if (pad > 0) rowBuf.write(' ' * pad);
+        } else {
+          // Empty line for shorter cells
+          rowBuf.write(' ' * (widths[col] + 2));
+        }
+
+        if (col < cellLines.length - 1 && _borderColumn) {
+          rowBuf.write(sb(b.left));
+        }
+      }
+
       if (_borderRight) rowBuf.write(sb(b.right));
-      if (lineIdx < lines.length - 1) rowBuf.write('\n');
+      if (lineIdx < maxLines - 1) rowBuf.write('\n');
     }
     return rowBuf.toString();
   }

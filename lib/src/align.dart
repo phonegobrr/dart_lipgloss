@@ -20,7 +20,7 @@ String alignTextHorizontal(String str, double pos, int width,
       buf.write(line);
     } else {
       final totalPad = width - lineWidth;
-      final leftPad = (totalPad * pos).round();
+      final leftPad = (totalPad * pos).toInt();
       final rightPad = totalPad - leftPad;
 
       final leftStr = ' ' * leftPad;
@@ -51,7 +51,7 @@ String alignTextVertical(String str, double pos, int height,
   if (contentHeight >= height) return str;
 
   final totalPad = height - contentHeight;
-  final topPad = (totalPad * pos).round();
+  final topPad = (totalPad * pos).toInt();
   final bottomPad = totalPad - topPad;
 
   // Determine width for empty lines

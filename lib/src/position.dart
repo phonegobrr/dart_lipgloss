@@ -69,7 +69,7 @@ String placeHorizontal(
     final line = lines[i];
     final lineWidth = stringWidth(line);
     final totalPad = width - lineWidth;
-    final leftPad = (totalPad * pos).round();
+    final leftPad = (totalPad * pos).toInt();
     final rightPad = totalPad - leftPad;
 
     if (leftPad > 0) {
@@ -113,7 +113,7 @@ String placeVertical(
   }
 
   final totalPad = height - contentHeight;
-  final topPad = (totalPad * pos).round();
+  final topPad = (totalPad * pos).toInt();
   final bottomPad = totalPad - topPad;
 
   final emptyLineRaw = renderWhitespace(maxWidth, ws.chars);

@@ -2,6 +2,7 @@
 // Original: https://github.com/charmbracelet/lipgloss
 // Licensed under MIT by Charmbracelet, Inc.
 
+import '../ansi/width.dart';
 import '../style.dart';
 import 'enumerator.dart';
 import 'renderer.dart';
@@ -36,7 +37,8 @@ class Tree {
   }
 
   /// Add a child item. Item can be a String, Tree, or TreeLeaf.
-  /// When a subtree has no root value, auto-parent it to the previous sibling (4q).
+  /// When a subtree has no root value, auto-parent it to the previous sibling.
+  /// If the previous sibling is a leaf/string, it's promoted to a Tree.
   Tree child(Object item) {
     if (item is Tree && item._rootValue.isEmpty && _children.isNotEmpty) {
       // Auto-nest: attach as children of previous sibling
@@ -45,6 +47,14 @@ class Tree {
         for (final c in item.getChildren()) {
           prev.child(c);
         }
+        return this;
+      } else {
+        // Promote previous leaf to a subtree
+        final promoted = Tree.root(prev);
+        for (final c in item.getChildren()) {
+          promoted.child(c);
+        }
+        _children[_children.length - 1] = promoted;
         return this;
       }
     }
@@ -145,15 +155,15 @@ class Tree {
   /// Get the root value.
   String get rootValue => _rootValue;
 
-  /// Get the children list, applying offset.
+  /// Get the children list, applying offset. Safely clips out-of-range values.
   List<Object> getChildren() {
     if (_offsetStart == 0 && _offsetEnd == 0) {
       return List<Object>.unmodifiable(_children);
     }
-    final end =
-        (_children.length - _offsetEnd).clamp(_offsetStart, _children.length);
-    if (_offsetStart >= end) return const [];
-    return List<Object>.unmodifiable(_children.sublist(_offsetStart, end));
+    final start = _offsetStart.clamp(0, _children.length);
+    final end = (_children.length - _offsetEnd).clamp(start, _children.length);
+    if (start >= end) return const [];
+    return List<Object>.unmodifiable(_children.sublist(start, end));
   }
 
   /// Get the raw children (no offset applied).
@@ -165,8 +175,15 @@ class Tree {
 
     final buf = StringBuffer();
 
-    // Render root
-    buf.write(_rootStyle.render(_rootValue));
+    // Render root, pad to width if set
+    var rootLine = _rootStyle.render(_rootValue);
+    if (_width > 0) {
+      final rootW = stringWidth(rootLine);
+      if (rootW < _width) {
+        rootLine = '$rootLine${' ' * (_width - rootW)}';
+      }
+    }
+    buf.write(rootLine);
 
     final visibleChildren = getChildren();
     if (visibleChildren.isNotEmpty) {

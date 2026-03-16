@@ -87,12 +87,13 @@ class LipglossList {
     return this;
   }
 
-  /// Get visible items (with offset applied).
+  /// Get visible items (with offset applied). Safely clips out-of-range values.
   List<Object> _visibleItems() {
     if (_offsetStart == 0 && _offsetEnd == 0) return _items;
-    final end = (_items.length - _offsetEnd).clamp(_offsetStart, _items.length);
-    if (_offsetStart >= end) return const [];
-    return _items.sublist(_offsetStart, end);
+    final start = _offsetStart.clamp(0, _items.length);
+    final end = (_items.length - _offsetEnd).clamp(start, _items.length);
+    if (start >= end) return const [];
+    return _items.sublist(start, end);
   }
 
   /// Render the list to a string.

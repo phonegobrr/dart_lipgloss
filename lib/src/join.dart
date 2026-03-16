@@ -37,7 +37,7 @@ String joinHorizontal(double pos, List<String> strs) {
     final block = blocks[i];
     final w = widths[i];
     final padCount = maxHeight - block.length;
-    final topPad = (padCount * pos).round();
+    final topPad = (padCount * pos).toInt();
     final bottomPad = padCount - topPad;
 
     final padded = <String>[
@@ -98,7 +98,7 @@ String joinVertical(double pos, List<String> strs) {
         result.write(line);
       } else {
         final totalPad = maxWidth - lineWidth;
-        final leftPad = (totalPad * pos).round();
+        final leftPad = (totalPad * pos).toInt();
         final rightPad = totalPad - leftPad;
         result.write(' ' * leftPad);
         result.write(line);

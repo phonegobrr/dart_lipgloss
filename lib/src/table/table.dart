@@ -326,7 +326,7 @@ class Table {
     for (var col = 0; col < styledCells.length; col++) {
       rowBuf.write(styledCells[col]);
       if (col < styledCells.length - 1 && _borderColumn) {
-        rowBuf.write(sb(b.middle.isNotEmpty ? b.middle : b.left));
+        rowBuf.write(sb(b.left));
       }
     }
 

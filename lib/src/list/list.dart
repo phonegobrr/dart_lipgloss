@@ -2,6 +2,7 @@
 // Original: https://github.com/charmbracelet/lipgloss
 // Licensed under MIT by Charmbracelet, Inc.
 
+import '../ansi/width.dart';
 import '../style.dart';
 import 'enumerator.dart';
 
@@ -90,12 +91,7 @@ class LipglossList {
   }
 
   int _enumWidth(String enumStr) {
-    // Simple visible width calculation for indentation
-    var w = 0;
-    for (final r in enumStr.runes) {
-      if (r >= 0x20) w++; // Skip control chars
-    }
-    return w;
+    return stringWidth(enumStr);
   }
 
   @override

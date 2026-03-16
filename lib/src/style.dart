@@ -2,6 +2,8 @@
 // Original: https://github.com/charmbracelet/lipgloss
 // Licensed under MIT by Charmbracelet, Inc.
 
+import 'dart:io';
+
 import 'package:meta/meta.dart';
 
 import 'align.dart';
@@ -1242,6 +1244,5 @@ void lipPrintln(Object? v) => print(v);
 
 /// Print without trailing newline.
 void lipPrint(Object? v) {
-  // ignore: avoid_print
-  print(v);
+  stdout.write(v);
 }

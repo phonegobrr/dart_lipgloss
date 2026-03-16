@@ -8,12 +8,6 @@
 class AnsiPenState {
   final List<String> _activeSequences = [];
 
-  /// Process a character and update pen state.
-  /// Returns true if this character is part of an ANSI escape sequence.
-  bool process(int codeUnit) {
-    return false; // Simplified for initial implementation
-  }
-
   /// Feed an ANSI escape sequence to the pen state tracker.
   void feedSequence(String sequence) {
     if (sequence == '\x1b[0m' || sequence == '\x1b[m') {

@@ -279,7 +279,17 @@ LipglossColor completeAdaptiveColor({
   required LipglossColor trueColor,
   required LipglossColor ansi256,
   required LipglossColor ansi,
+  required int profileLevel,
 }) {
-  // This would normally check the color profile, but for now returns trueColor
-  return trueColor;
+  // profileLevel: 0=ascii, 1=ansi, 2=ansi256, 3=trueColor
+  switch (profileLevel) {
+    case 3:
+      return trueColor;
+    case 2:
+      return ansi256;
+    case 1:
+      return ansi;
+    default:
+      return const NoColor();
+  }
 }

@@ -58,6 +58,7 @@ void main() {
     trueColor: lipColor('#7D56F4'),
     ansi256: ANSI256Color(135),
     ansi: lipglossMagenta,
+    profileLevel: 3, // trueColor
   );
   print(Style()
       .foreground(completeColor)

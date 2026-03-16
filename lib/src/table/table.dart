@@ -7,6 +7,7 @@ import '../ansi/sgr.dart';
 import '../border.dart';
 import '../color.dart';
 import '../style.dart';
+import '../wrap.dart' as wrap_lib;
 import 'resizing.dart';
 
 /// Constant for header row in StyleFunc.
@@ -27,11 +28,8 @@ class Table {
   bool _borderRight = true;
   Style Function(int row, int col)? _styleFunc;
   int _width = 0;
-  // ignore: unused_field
   int _height = 0;
-  // ignore: unused_field
   int _yOffset = 0;
-  // ignore: unused_field
   bool _wrap = false;
 
   Table();
@@ -212,7 +210,19 @@ class Table {
       buf.write(_renderBottomBorder(effectiveWidths, b, sb));
     }
 
-    return buf.toString();
+    var result = buf.toString();
+
+    // Apply height constraint with yOffset
+    if (_height > 0 || _yOffset > 0) {
+      final lines = result.split('\n');
+      final start = _yOffset.clamp(0, lines.length);
+      final end = _height > 0
+          ? (start + _height).clamp(0, lines.length)
+          : lines.length;
+      result = lines.sublist(start, end).join('\n');
+    }
+
+    return result;
   }
 
   int _getNumColumns() {
@@ -246,8 +256,13 @@ class Table {
     if (_borderLeft) buf.write(sb(b.left));
 
     for (var col = 0; col < widths.length; col++) {
-      final cellContent = col < cells.length ? cells[col] : '';
+      var cellContent = col < cells.length ? cells[col] : '';
       final width = widths[col];
+
+      // Word wrap if enabled
+      if (_wrap && width > 0 && stringWidth(cellContent) > width) {
+        cellContent = wrap_lib.wordWrap(cellContent, width);
+      }
 
       // Apply style func if set
       var styled = cellContent;

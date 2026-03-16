@@ -181,20 +181,29 @@ class Table {
       return _borderStyle.render(s);
     }
 
-    // Measure content widths
+    // Measure content widths, accounting for styleFunc padding/border overhead
     final contentWidths = <List<int>>[];
     if (hasHeaders) {
       final headerWidths = <int>[];
       for (var col = 0; col < numCols; col++) {
-        headerWidths
-            .add(col < _headers.length ? stringWidth(_headers[col]) : 0);
+        var w = col < _headers.length ? stringWidth(_headers[col]) : 0;
+        if (_styleFunc != null) {
+          final style = _styleFunc!(headerRow, col).inherit(_baseStyle);
+          w += style.getHorizontalPadding + style.getHorizontalBorderSize;
+        }
+        headerWidths.add(w);
       }
       contentWidths.add(headerWidths);
     }
     for (var row = 0; row < _data.rows; row++) {
       final rowWidths = <int>[];
       for (var col = 0; col < numCols; col++) {
-        rowWidths.add(stringWidth(_data.at(row, col)));
+        var w = stringWidth(_data.at(row, col));
+        if (_styleFunc != null) {
+          final style = _styleFunc!(row, col).inherit(_baseStyle);
+          w += style.getHorizontalPadding + style.getHorizontalBorderSize;
+        }
+        rowWidths.add(w);
       }
       contentWidths.add(rowWidths);
     }

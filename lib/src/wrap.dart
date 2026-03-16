@@ -3,7 +3,6 @@
 // Licensed under MIT by Charmbracelet, Inc.
 
 import 'ansi/parser.dart';
-import 'ansi/strip.dart';
 import 'ansi/width.dart';
 
 /// ANSI-aware word wrapping to [limit] visible cells.
@@ -126,6 +125,7 @@ List<String> _splitKeepDelimiters(String text, String delimiters) {
 }
 
 /// Hard-wrap a string to [limit] cells, breaking mid-word if necessary.
+/// ANSI-aware: preserves SGR styling and hyperlink state across line breaks.
 String hardWrap(String s, int limit) {
   if (limit <= 0) return s;
 
@@ -138,22 +138,50 @@ String hardWrap(String s, int limit) {
       continue;
     }
 
-    final stripped = stripAnsi(line);
+    final segments = parseAnsiSegments(line);
     final buf = StringBuffer();
     var currentWidth = 0;
+    final penState = AnsiPenState();
+    String? activeLink;
 
-    for (final rune in stripped.runes) {
-      final char = String.fromCharCode(rune);
-      final w = runeWidth(rune);
+    for (final segment in segments) {
+      if (segment.isAnsi) {
+        final seq = segment.text;
+        penState.feedSequence(seq);
 
-      if (currentWidth + w > limit) {
-        result.add(buf.toString());
-        buf.clear();
-        currentWidth = 0;
+        // Track OSC 8 hyperlink state
+        if (seq.startsWith('\x1b]8;')) {
+          final isClose = seq == '\x1b]8;;\x1b\\' || seq == '\x1b]8;;\x07';
+          if (isClose) {
+            activeLink = null;
+          } else {
+            activeLink = seq;
+          }
+        }
+
+        buf.write(seq);
+        continue;
       }
 
-      buf.write(char);
-      currentWidth += w;
+      // Process plain text character by character
+      for (final rune in segment.text.runes) {
+        final char = String.fromCharCode(rune);
+        final w = runeWidth(rune);
+
+        if (currentWidth + w > limit && currentWidth > 0) {
+          // Close active state, break line, reapply
+          if (activeLink != null) buf.write('\x1b]8;;\x1b\\');
+          if (penState.hasStyle) buf.write('\x1b[0m');
+          result.add(buf.toString());
+          buf.clear();
+          currentWidth = 0;
+          if (penState.hasStyle) buf.write(penState.currentStyle);
+          if (activeLink != null) buf.write(activeLink);
+        }
+
+        buf.write(char);
+        currentWidth += w;
+      }
     }
 
     if (buf.isNotEmpty) {

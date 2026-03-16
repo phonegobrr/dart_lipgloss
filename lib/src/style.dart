@@ -1103,15 +1103,12 @@ class Style {
 
     if (!te.hasStyle && (link == null || link.isEmpty)) return s;
 
-    // Build space style (fg/bg but conditional underline/strikethrough)
+    // Build space style: Go's teSpace only carries fg/bg/underlineColor
+    // plus conditional underline/strikethrough. It does NOT inherit
+    // bold/italic/faint/blink/reverse from the main text style.
     AnsiStyle? teSpace;
     if (useSpaceStyler) {
       teSpace = AnsiStyle();
-      if (getBold) teSpace.setBold();
-      if (getItalic) teSpace.setItalic();
-      if (getFaint) teSpace.setFaint();
-      if (getBlink) teSpace.setBlink();
-      if (getReverse) teSpace.setReverse();
       if (fg is! NoColor) teSpace.setForeground(fg);
       if (bg is! NoColor) teSpace.setBackground(bg);
       if (uc is! NoColor) teSpace.setUnderlineColor(uc);
@@ -1212,7 +1209,7 @@ class Style {
     // Top padding
     if (pt > 0) {
       final emptyLine =
-          _padLine('', maxW, pl, pr, bgStyle, wsStyle, _paddingChar);
+          _padLine('', maxW, pl, pr, bgStyle, wsStyle, getPaddingChar);
       for (var i = 0; i < pt; i++) {
         buf.write(emptyLine);
         buf.write('\n');
@@ -1222,14 +1219,14 @@ class Style {
     // Content lines with left/right padding
     for (var i = 0; i < lines.length; i++) {
       buf.write(
-          _padLine(lines[i], maxW, pl, pr, bgStyle, wsStyle, _paddingChar));
+          _padLine(lines[i], maxW, pl, pr, bgStyle, wsStyle, getPaddingChar));
       if (i < lines.length - 1) buf.write('\n');
     }
 
     // Bottom padding
     if (pb > 0) {
       final emptyLine =
-          _padLine('', maxW, pl, pr, bgStyle, wsStyle, _paddingChar);
+          _padLine('', maxW, pl, pr, bgStyle, wsStyle, getPaddingChar);
       for (var i = 0; i < pb; i++) {
         buf.write('\n');
         buf.write(emptyLine);
@@ -1261,14 +1258,19 @@ class Style {
   }
 
   /// Build whitespace style for padding/alignment fill.
+  /// Go's teWhitespace carries bg, and when reverse is active, also fg + reverse.
   AnsiStyle? _buildWhitespaceStyle() {
     final bg = getBackground;
+    final fg = getForeground;
     final shouldStyle = getColorWhitespace || getReverse;
     if (!shouldStyle && bg is NoColor) return null;
 
     final ws = AnsiStyle();
     if (bg is! NoColor) ws.setBackground(bg);
-    if (getReverse) ws.setReverse();
+    if (getReverse) {
+      ws.setReverse();
+      if (fg is! NoColor) ws.setForeground(fg);
+    }
     return ws.hasStyle ? ws : null;
   }
 
@@ -1374,7 +1376,7 @@ class Style {
 
     // Check for border gradient blending
     final blendColors = getBorderForegroundBlend;
-    final useBlend = blendColors != null && blendColors.length >= 2;
+    final useBlend = blendColors != null && blendColors.isNotEmpty;
 
     // Gradient arrays per side (null if no blending)
     List<LipglossColor>? topGradient;
@@ -1383,11 +1385,15 @@ class Style {
     List<LipglossColor>? leftGradient;
 
     if (useBlend) {
-      final topW = hasTop ? contentWidth + leftW + rightW : 0;
-      final rightH = hasRight ? lines.length : 0;
-      final bottomW = hasBottom ? contentWidth + leftW + rightW : 0;
-      final leftH = hasLeft ? lines.length : 0;
-      final totalPerimeter = topW + rightH + bottomW + leftH;
+      // Go's perimeter formula: (contentWidth + contentHeight + 2) * 2
+      // Segments: top = contentWidth+2, right = contentHeight,
+      //           bottom = contentWidth+2 (reversed), left = contentHeight (reversed)
+      final h = lines.length;
+      final topSeg = contentWidth + 2;
+      final rightSeg = h;
+      final bottomSeg = contentWidth + 2;
+      final leftSeg = h;
+      final totalPerimeter = topSeg + rightSeg + bottomSeg + leftSeg;
       if (totalPerimeter > 0) {
         var gradient = blend1D(totalPerimeter, blendColors);
         // Rotate by offset
@@ -1400,22 +1406,14 @@ class Style {
         }
         // Slice into segments: top, right, bottom (reversed), left (reversed)
         var idx = 0;
-        if (topW > 0) {
-          topGradient = gradient.sublist(idx, idx + topW);
-          idx += topW;
-        }
-        if (rightH > 0) {
-          rightGradient = gradient.sublist(idx, idx + rightH);
-          idx += rightH;
-        }
-        if (bottomW > 0) {
-          bottomGradient =
-              gradient.sublist(idx, idx + bottomW).reversed.toList();
-          idx += bottomW;
-        }
-        if (leftH > 0) {
-          leftGradient = gradient.sublist(idx, idx + leftH).reversed.toList();
-        }
+        topGradient = gradient.sublist(idx, idx + topSeg);
+        idx += topSeg;
+        rightGradient = gradient.sublist(idx, idx + rightSeg);
+        idx += rightSeg;
+        bottomGradient =
+            gradient.sublist(idx, idx + bottomSeg).reversed.toList();
+        idx += bottomSeg;
+        leftGradient = gradient.sublist(idx, idx + leftSeg).reversed.toList();
       }
     }
 
@@ -1550,7 +1548,7 @@ class Style {
         hasMarginBg ? (AnsiStyle()..setBackground(marginBg)) : null;
 
     String marginStr(int width) {
-      final ws = renderWhitespace(width, _marginChar);
+      final ws = renderWhitespace(width, getMarginChar);
       if (marginSgr != null) return marginSgr.styled(ws);
       return ws;
     }

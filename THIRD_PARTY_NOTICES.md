@@ -2,9 +2,7 @@
 
 ## Lip Gloss by Charmbracelet, Inc.
 
-This project is a native Dart port of
-[Lip Gloss](https://github.com/charmbracelet/lipgloss) by
-[Charmbracelet, Inc.](https://charm.sh), originally written in Go.
+This project is a native Dart port of [Lip Gloss](https://github.com/charmbracelet/lipgloss) by [Charmbracelet, Inc.](https://charm.sh), originally written in Go.
 
 The original project is licensed under the MIT License:
 
@@ -28,5 +26,4 @@ The original project is licensed under the MIT License:
 > OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 > SOFTWARE.
 
-This Dart port is an independent project and is not affiliated with or
-endorsed by Charmbracelet, Inc.
+This Dart port is an independent project and is not affiliated with or endorsed by Charmbracelet, Inc.

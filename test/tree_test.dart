@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:test/test.dart';
 import 'package:dart_lipgloss/tree.dart';
 
@@ -52,6 +54,42 @@ void main() {
   group('TreeLeaf', () {
     test('toString returns value', () {
       expect(const TreeLeaf('hello').toString(), equals('hello'));
+    });
+  });
+
+  group('Tree golden tests', () {
+    test('basic tree matches golden', () {
+      final t = Tree.root('Root')
+        ..child('Alpha')
+        ..child('Beta')
+        ..child('Gamma');
+      final expected = File('test/testdata/tree/basic.golden').readAsStringSync();
+      expect(t.render(), equals(expected));
+    });
+
+    test('rounded tree matches golden', () {
+      final t = Tree.root('Root')
+        ..child('Alpha')
+        ..child('Beta')
+        ..child('Gamma');
+      t.enumerator(roundedEnumerator);
+      t.indenter(roundedIndenter);
+      final expected = File('test/testdata/tree/rounded.golden').readAsStringSync();
+      expect(t.render(), equals(expected));
+    });
+
+    test('nested tree matches golden', () {
+      final t = Tree.root('Root')
+        ..child(
+            Tree.root('Branch A')
+              ..child('Leaf 1')
+              ..child('Leaf 2'))
+        ..child(
+            Tree.root('Branch B')
+              ..child('Leaf 3'))
+        ..child('Leaf C');
+      final expected = File('test/testdata/tree/nested.golden').readAsStringSync();
+      expect(t.render(), equals(expected));
     });
   });
 }

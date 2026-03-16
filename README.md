@@ -4,10 +4,9 @@
 
 > Style definitions for nice terminal layouts. Built with TUIs in mind.
 
-This is an independent, native Dart port of the Go Lip Gloss library (MIT licensed).
-It is **not a fork** and is **not affiliated with Charmbracelet, Inc.**
-All credit for the original design, API concepts, and inspiration belongs to the
-Charmbracelet team.
+This is an independent, native Dart port of the Go Lip Gloss library (MIT licensed). It is **not a fork** and is **not affiliated with Charmbracelet, Inc.**
+
+All credit for the original design, API concepts, and inspiration belongs to the Charmbracelet team.
 
 ## Installation
 
@@ -61,14 +60,10 @@ dart compile exe bin/demo.dart -o build/dart_lipgloss_demo
 
 ## Credits & Acknowledgements
 
-This project is a native Dart port of
-[Lip Gloss](https://github.com/charmbracelet/lipgloss) by
-[Charmbracelet, Inc.](https://charm.sh), released under the
-[MIT License](https://github.com/charmbracelet/lipgloss/blob/master/LICENSE).
+This project is a native Dart port of [Lip Gloss](https://github.com/charmbracelet/lipgloss) by [Charmbracelet, Inc.](https://charm.sh), released under the [MIT License](https://github.com/charmbracelet/lipgloss/blob/master/LICENSE).
 
-We are deeply grateful to the Charmbracelet team for creating such an
-excellent library.
+We are deeply grateful to the Charmbracelet team for creating such an excellent library.
 
 ## License
 
-MIT — see [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+MIT - see [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

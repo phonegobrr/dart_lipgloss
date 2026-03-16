@@ -1,0 +1,5 @@
+Root
+├── Branch A
+│   ├── Leaf 1
+│   └── Leaf 2├── Branch B
+│   └── Leaf 3└── Leaf C

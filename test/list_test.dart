@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:test/test.dart';
 import 'package:dart_lipgloss/list.dart';
 
@@ -52,6 +54,29 @@ void main() {
     test('toString equals render', () {
       final list = LipglossList(['A', 'B']);
       expect(list.toString(), equals(list.render()));
+    });
+  });
+
+  group('List golden tests', () {
+    test('bullet list matches golden', () {
+      final l = LipglossList(['Apple', 'Banana', 'Cherry'])
+        ..enumerator(bullet);
+      final expected = File('test/testdata/list/bullet.golden').readAsStringSync();
+      expect(l.render(), equals(expected));
+    });
+
+    test('arabic list matches golden', () {
+      final l = LipglossList(['Apple', 'Banana', 'Cherry'])
+        ..enumerator(arabic);
+      final expected = File('test/testdata/list/arabic.golden').readAsStringSync();
+      expect(l.render(), equals(expected));
+    });
+
+    test('roman list matches golden', () {
+      final l = LipglossList(['Apple', 'Banana', 'Cherry'])
+        ..enumerator(roman);
+      final expected = File('test/testdata/list/roman.golden').readAsStringSync();
+      expect(l.render(), equals(expected));
     });
   });
 }

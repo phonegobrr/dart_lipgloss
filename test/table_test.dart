@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:test/test.dart';
 import 'package:dart_lipgloss/dart_lipgloss.dart';
 import 'package:dart_lipgloss/table.dart';
@@ -97,6 +99,49 @@ void main() {
       expect(f.rows, equals(2));
       expect(f.at(0, 0), equals('a'));
       expect(f.at(1, 0), equals('c'));
+    });
+  });
+
+  group('Table golden tests', () {
+    test('basic table matches golden', () {
+      final t = Table()
+        ..headers(['NAME', 'VALUE'])
+        ..rows([
+          ['Alpha', '1'],
+          ['Beta', '2'],
+          ['Gamma', '3'],
+        ])
+        ..borderDef(normalBorder)
+        ..borderColumn(true);
+      final expected = File('test/testdata/table/basic.golden').readAsStringSync();
+      expect(t.render(), equals(expected));
+    });
+
+    test('rounded table matches golden', () {
+      final t = Table()
+        ..headers(['NAME', 'VALUE'])
+        ..rows([
+          ['Alpha', '1'],
+          ['Beta', '2'],
+          ['Gamma', '3'],
+        ])
+        ..borderDef(roundedBorder)
+        ..borderColumn(true);
+      final expected = File('test/testdata/table/rounded.golden').readAsStringSync();
+      expect(t.render(), equals(expected));
+    });
+
+    test('columns table matches golden', () {
+      final t = Table()
+        ..headers(['A', 'B', 'C'])
+        ..rows([
+          ['1', '2', '3'],
+          ['4', '5', '6'],
+        ])
+        ..borderDef(normalBorder)
+        ..borderColumn(true);
+      final expected = File('test/testdata/table/columns.golden').readAsStringSync();
+      expect(t.render(), equals(expected));
     });
   });
 }

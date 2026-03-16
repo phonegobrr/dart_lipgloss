@@ -1,0 +1,22 @@
+name: dart_lipgloss
+version: 0.1.0
+description: >
+  Style definitions for nice terminal layouts. A native Dart port of
+  Lip Gloss by Charmbracelet (https://github.com/charmbracelet/lipgloss).
+repository: https://github.com/phonegobrr/dart_lipgloss
+homepage: https://github.com/charmbracelet/lipgloss
+issue_tracker: https://github.com/phonegobrr/dart_lipgloss/issues
+
+environment:
+  sdk: ^3.4.0
+
+dependencies:
+  characters: ^1.3.0
+  meta: ^1.12.0
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^4.0.0
+
+executables:
+  dart_lipgloss_demo: demo

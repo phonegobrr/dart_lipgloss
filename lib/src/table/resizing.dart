@@ -90,20 +90,25 @@ List<int> _shrinkWidthsThreePhase(
   var total = sum(result);
 
   // Phase 1: Shrink very big columns (> 2x median of their content)
-  while (total > available) {
-    final widestIdx = _findWidest(result);
-    if (result[widestIdx] <= 1) break;
+  var madeProgress = true;
+  while (total > available && madeProgress) {
+    madeProgress = false;
+    for (var col = 0; col < result.length; col++) {
+      if (total <= available) break;
+      if (result[col] <= 1) continue;
 
-    final med = _columnMedian(contentWidths, widestIdx);
-    // "Very big" means > 2x median
-    if (result[widestIdx] <= med * 2) break;
+      final med = _columnMedian(contentWidths, col);
+      // "Very big" means > 2x median
+      if (result[col] <= med * 2) continue;
 
-    final target = math.max(med * 2, 1);
-    final reduction = math.min(result[widestIdx] - target, total - available);
-    if (reduction <= 0) break;
+      final target = math.max(med * 2, 1);
+      final reduction = math.min(result[col] - target, total - available);
+      if (reduction <= 0) continue;
 
-    result[widestIdx] -= reduction;
-    total -= reduction;
+      result[col] -= reduction;
+      total -= reduction;
+      madeProgress = true;
+    }
   }
 
   // Phase 2: Shrink to median

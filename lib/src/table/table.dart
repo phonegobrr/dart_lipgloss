@@ -255,18 +255,39 @@ class Table {
       }
       if (_borderBottom && b.bottom.isNotEmpty) fixedLines++;
 
-      // Available lines for data rows
-      final availableForRows = _height - fixedLines;
+      // Available lines for data rows (reserve 1 for overflow indicator if needed)
+      var availableForRows = _height - fixedLines;
+
+      // Try to fit rows; if not all fit, we need 1 line for overflow indicator
+      var lastVisible = _firstVisibleRowIndex - 1;
+      var usedLines = 0;
+      var allFit = true;
       if (availableForRows > 0) {
-        var usedLines = 0;
-        var lastVisible = _firstVisibleRowIndex - 1;
         for (var i = _firstVisibleRowIndex; i < renderedRows.length; i++) {
           final rowLines = renderedRows[i].split('\n').length;
           final separatorLines =
               (i > _firstVisibleRowIndex && rowSeparator != null) ? 1 : 0;
-          if (usedLines + rowLines + separatorLines > availableForRows) break;
+          if (usedLines + rowLines + separatorLines > availableForRows) {
+            allFit = false;
+            break;
+          }
           usedLines += rowLines + separatorLines;
           lastVisible = i;
+        }
+
+        // If not all rows fit, re-run with 1 line reserved for overflow
+        if (!allFit && availableForRows > 1) {
+          availableForRows -= 1; // reserve for overflow row
+          lastVisible = _firstVisibleRowIndex - 1;
+          usedLines = 0;
+          for (var i = _firstVisibleRowIndex; i < renderedRows.length; i++) {
+            final rowLines = renderedRows[i].split('\n').length;
+            final separatorLines =
+                (i > _firstVisibleRowIndex && rowSeparator != null) ? 1 : 0;
+            if (usedLines + rowLines + separatorLines > availableForRows) break;
+            usedLines += rowLines + separatorLines;
+            lastVisible = i;
+          }
         }
         _lastVisibleRowIndex = lastVisible;
       } else {
@@ -309,15 +330,17 @@ class Table {
 
     // Overflow indicator
     if (_height > 0 && _lastVisibleRowIndex < _data.rows - 1) {
-      // Show overflow "…" row
       final overflowCount = _data.rows - 1 - _lastVisibleRowIndex;
-      final overflowText = '\u2026 $overflowCount more';
-      if (_borderLeft) buf.write(sb(b.left));
+      final overflowLabel = ' \u2026 $overflowCount more';
+      final labelWidth = stringWidth(overflowLabel);
+      // Total content area width (cell widths + padding + column separators)
       final totalContentW = effectiveWidths.fold(0, (a, b) => a + b) +
           effectiveWidths.length * 2 +
           (_borderColumn ? math.max(0, effectiveWidths.length - 1) * bw : 0);
-      final padNeeded = totalContentW - stringWidth(overflowText);
-      buf.write(' $overflowText');
+      final padNeeded = totalContentW - labelWidth;
+
+      if (_borderLeft) buf.write(sb(b.left));
+      buf.write(overflowLabel);
       if (padNeeded > 0) buf.write(' ' * padNeeded);
       if (_borderRight) buf.write(sb(b.right));
       buf.write('\n');

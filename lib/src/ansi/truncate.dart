@@ -151,25 +151,3 @@ String _truncateLeftRaw(String s, int targetWidth) {
   return chars.sublist(startIdx).join();
 }
 
-/// ANSI-aware substring by visible cell position [start] to [end].
-String cut(String s, int start, int end) {
-  if (start < 0) start = 0;
-  if (end < start) return '';
-
-  final stripped = stripAnsi(s);
-  final chars = stripped.characters.toList();
-
-  var currentPos = 0;
-  final buf = StringBuffer();
-
-  for (final grapheme in chars) {
-    final w = stringWidth(grapheme);
-    if (currentPos >= end) break;
-    if (currentPos + w > start) {
-      buf.write(grapheme);
-    }
-    currentPos += w;
-  }
-
-  return buf.toString();
-}

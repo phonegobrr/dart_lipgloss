@@ -5,6 +5,7 @@
 /// ANSI escape code utilities for terminal styling.
 library;
 
+export 'cut.dart';
 export 'hyperlink.dart';
 export 'parser.dart';
 export 'sgr.dart';

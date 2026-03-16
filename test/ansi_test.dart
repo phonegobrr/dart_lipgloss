@@ -136,4 +136,77 @@ void main() {
       expect(result, contains('44'));
     });
   });
+
+  group('cut', () {
+    test('plain text substring', () {
+      expect(cut('hello world', 0, 5), equals('hello'));
+    });
+
+    test('plain text middle substring', () {
+      expect(cut('hello world', 6, 11), equals('world'));
+    });
+
+    test('start equals end returns empty', () {
+      expect(cut('hello', 3, 3), equals(''));
+    });
+
+    test('end beyond string length', () {
+      final result = cut('hi', 0, 10);
+      expect(result, equals('hi'));
+    });
+
+    test('negative start treated as zero', () {
+      expect(cut('hello', -5, 3), equals('hel'));
+    });
+
+    test('empty string returns empty', () {
+      expect(cut('', 0, 5), equals(''));
+    });
+
+    test('preserves ANSI styles within range', () {
+      final styled = '\x1b[1mhello\x1b[0m world';
+      final result = cut(styled, 0, 5);
+      // Should contain bold sequence and 'hello', plus reset
+      expect(result, contains('\x1b[1m'));
+      expect(result, contains('hello'));
+      expect(result, contains('\x1b[0m'));
+    });
+
+    test('closes active SGR at cut end', () {
+      final styled = '\x1b[31mhello world\x1b[0m';
+      final result = cut(styled, 0, 5);
+      // Should contain red SGR, 'hello', and a reset
+      expect(result, contains('\x1b[31m'));
+      expect(result, contains('hello'));
+      expect(result, endsWith('\x1b[0m'));
+    });
+
+    test('mid-range cut with active style', () {
+      final styled = '\x1b[1mhello world\x1b[0m';
+      final result = cut(styled, 6, 11);
+      expect(result, contains('world'));
+      // Bold started before range, should still be present
+      expect(result, contains('\x1b['));
+    });
+
+    test('CJK double-width characters', () {
+      // '你好' = 4 cells (2+2)
+      final result = cut('你好world', 0, 4);
+      expect(result, contains('你好'));
+    });
+
+    test('CJK cut at cell boundary', () {
+      // '你好' = 4 cells; 'world' starts at cell 4
+      final result = cut('你好world', 4, 9);
+      expect(result, equals('world'));
+    });
+
+    test('preserves OSC hyperlinks in range', () {
+      final linked = '\x1b]8;;https://example.com\x1b\\click here\x1b]8;;\x1b\\';
+      final result = cut(linked, 0, 5);
+      // Should contain the OSC open sequence
+      expect(result, contains('\x1b]8;;https://example.com\x1b\\'));
+      expect(result, contains('click'));
+    });
+  });
 }

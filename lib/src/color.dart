@@ -80,11 +80,12 @@ class ANSI256Color extends LipglossColor {
       final g = 8 + (value - 232) * 10;
       return (r: g, g: g, b: g, a: 255);
     }
-    // 6x6x6 color cube: 16-231
+    // 6x6x6 color cube: 16-231 (xterm palette)
+    const cubeLevels = [0, 95, 135, 175, 215, 255];
     final idx = value - 16;
-    final r = (idx ~/ 36) * 51;
-    final g = ((idx % 36) ~/ 6) * 51;
-    final b = (idx % 6) * 51;
+    final r = cubeLevels[idx ~/ 36];
+    final g = cubeLevels[(idx % 36) ~/ 6];
+    final b = cubeLevels[idx % 6];
     return (r: r, g: g, b: b, a: 255);
   }
 
@@ -221,11 +222,26 @@ ANSI256Color rgbToAnsi256(RGBColor c) {
     return ANSI256Color(((c.r - 8) / 247.0 * 24.0).round() + 232);
   }
 
-  // Map to 6x6x6 color cube
-  final ri = (c.r / 255.0 * 5.0).round();
-  final gi = (c.g / 255.0 * 5.0).round();
-  final bi = (c.b / 255.0 * 5.0).round();
+  // Map to 6x6x6 color cube (xterm levels: 0, 95, 135, 175, 215, 255)
+  final ri = _nearestCubeIndex(c.r);
+  final gi = _nearestCubeIndex(c.g);
+  final bi = _nearestCubeIndex(c.b);
   return ANSI256Color(16 + 36 * ri + 6 * gi + bi);
+}
+
+const _cubeLevels = [0, 95, 135, 175, 215, 255];
+
+int _nearestCubeIndex(int value) {
+  var bestIdx = 0;
+  var bestDist = (value - _cubeLevels[0]).abs();
+  for (var i = 1; i < _cubeLevels.length; i++) {
+    final dist = (value - _cubeLevels[i]).abs();
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestIdx = i;
+    }
+  }
+  return bestIdx;
 }
 
 /// Downsample a color to the nearest ANSI 16 color.

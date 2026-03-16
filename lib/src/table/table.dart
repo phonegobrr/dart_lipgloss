@@ -294,7 +294,8 @@ class Table {
 
     for (var col = 0; col < widths.length; col++) {
       final fillWidth = widths[col] + 2;
-      final fill = b.middle.isNotEmpty ? b.top : '─';
+      // Use b.top for horizontal fill if available, otherwise default to '─'
+      final fill = b.top.isNotEmpty ? b.top : '─';
       buf.write(sb(fill * fillWidth));
       if (col < widths.length - 1 && _borderColumn) {
         buf.write(sb(b.middle.isNotEmpty ? b.middle : fill));

@@ -3,6 +3,7 @@
 // Licensed under MIT by Charmbracelet, Inc.
 
 import 'ansi/sgr.dart';
+import 'ansi/width.dart';
 
 /// A single terminal cell.
 class Cell {
@@ -33,15 +34,20 @@ class Canvas {
 
       var cx = x;
       for (final rune in lines[row].runes) {
+        final w = _runeDisplayWidth(rune);
         if (cx < 0) {
-          cx++;
+          cx += w;
           continue;
         }
         if (cx >= _width) break;
 
         final char = String.fromCharCode(rune);
         _cells[cy][cx] = Cell(char);
-        cx++;
+        // For wide characters, fill the next cell with null (occupied)
+        for (var k = 1; k < w && cx + k < _width; k++) {
+          _cells[cy][cx + k] = null;
+        }
+        cx += w;
       }
     }
   }
@@ -93,3 +99,6 @@ class Canvas {
     return buf.toString();
   }
 }
+
+/// Get display width of a single rune.
+int _runeDisplayWidth(int rune) => runeWidth(rune);

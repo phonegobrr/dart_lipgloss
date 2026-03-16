@@ -794,10 +794,10 @@ class Style {
       style.setBackground(bg);
     }
 
-    if (!style.hasStyle) return s;
-
     // Apply hyperlink if set
     final link = getHyperlink;
+
+    if (!style.hasStyle && (link == null || link.isEmpty)) return s;
 
     // Apply style to each line to handle multi-line correctly
     final lines = s.split('\n');
@@ -805,11 +805,14 @@ class Style {
     for (var i = 0; i < lines.length; i++) {
       var line = lines[i];
       if (line.isNotEmpty) {
-        if (getUnderlineSpaces || getStrikethroughSpaces || getColorWhitespace) {
-          line = style.styled(line);
-        } else {
-          // Style non-whitespace portions, leave whitespace unstyled
-          line = _styleNonWhitespace(line, style);
+        if (style.hasStyle) {
+          if (!getColorWhitespace &&
+              !getUnderlineSpaces &&
+              !getStrikethroughSpaces) {
+            line = _styleNonWhitespace(line, style);
+          } else {
+            line = style.styled(line);
+          }
         }
         if (link != null && link.isNotEmpty) {
           line = hl.hyperlink(link, line);
@@ -823,9 +826,34 @@ class Style {
   }
 
   String _styleNonWhitespace(String line, AnsiStyle style) {
-    // Simple approach: style the whole line. Full whitespace-aware styling
-    // would require walking char by char, which we simplify here.
-    return style.styled(line);
+    // Walk the line and style only non-whitespace runs.
+    // Whitespace between styled segments is left unstyled.
+    final buf = StringBuffer();
+    final open = style.openSequence;
+    var inStyled = false;
+
+    for (var i = 0; i < line.length; i++) {
+      final ch = line[i];
+      if (ch == ' ' || ch == '\t') {
+        if (inStyled) {
+          buf.write(resetSequence);
+          inStyled = false;
+        }
+        buf.write(ch);
+      } else {
+        if (!inStyled) {
+          buf.write(open);
+          inStyled = true;
+        }
+        buf.write(ch);
+      }
+    }
+
+    if (inStyled) {
+      buf.write(resetSequence);
+    }
+
+    return buf.toString();
   }
 
   String _applyPadding(String s) {

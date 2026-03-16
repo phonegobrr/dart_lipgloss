@@ -42,12 +42,14 @@ String truncateLeft(String s, int width, [String prefix = '']) {
 }
 
 /// Raw truncation from the right to [targetWidth] visible cells.
-/// Walks through the string preserving ANSI sequences.
+/// Walks through the string preserving ANSI sequences, closing any active
+/// styles at the truncation point.
 String _truncateRaw(String s, int targetWidth) {
   final buf = StringBuffer();
   var currentWidth = 0;
   var inEscape = false;
   var escBuf = StringBuffer();
+  var hasActiveStyle = false;
 
   final stripped = stripAnsi(s);
   if (stripped.isEmpty) return s;
@@ -69,7 +71,14 @@ String _truncateRaw(String s, int targetWidth) {
       escBuf.writeCharCode(codeUnits[i]);
       // Check for end of CSI sequence
       if (codeUnits[i] >= 0x40 && codeUnits[i] <= 0x7E && codeUnits[i] != 0x5B) {
-        buf.write(escBuf);
+        final seq = escBuf.toString();
+        buf.write(seq);
+        // Track whether we have an active style or a reset
+        if (seq == '\x1b[0m' || seq == '\x1b[m') {
+          hasActiveStyle = false;
+        } else {
+          hasActiveStyle = true;
+        }
         inEscape = false;
       }
       // Check for OSC sequence end (BEL)
@@ -100,6 +109,11 @@ String _truncateRaw(String s, int targetWidth) {
       buf.writeCharCode(codeUnits[i]);
       i++;
     }
+  }
+
+  // Close any active style
+  if (hasActiveStyle) {
+    buf.write('\x1b[0m');
   }
 
   return buf.toString();

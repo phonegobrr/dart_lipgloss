@@ -29,10 +29,12 @@ List<int> optimizedWidths(
   if (tableWidth <= 0) return naturalWidths;
 
   // Calculate available width for content
+  // Each cell has 1 space padding on each side (2 per cell)
+  final cellPaddingOverhead = numColumns * 2;
   final borderOverhead = hasBorderColumn
       ? borderWidth * (numColumns + 1)
       : borderWidth * 2;
-  final availableWidth = tableWidth - borderOverhead;
+  final availableWidth = tableWidth - borderOverhead - cellPaddingOverhead;
 
   if (availableWidth <= 0) return List<int>.filled(numColumns, 1);
 

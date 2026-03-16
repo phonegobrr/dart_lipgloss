@@ -2,9 +2,11 @@
 // Original: https://github.com/charmbracelet/lipgloss
 // Licensed under MIT by Charmbracelet, Inc.
 
+import 'ansi/cut.dart' as ansi_cut;
+import 'ansi/width.dart';
 import 'style.dart';
 
-/// A style range for applying a style to a substring by character index.
+/// A style range for applying a style to a substring by visible cell index.
 class StyleRange {
   final int start;
   final int end;
@@ -12,7 +14,8 @@ class StyleRange {
   const StyleRange(this.start, this.end, this.style);
 }
 
-/// Apply different styles to specific character ranges.
+/// Apply different styles to specific visible-cell ranges.
+/// ANSI-aware: uses ansi cut to preserve existing styling.
 String styleRanges(String s, List<StyleRange> ranges) {
   if (ranges.isEmpty) return s;
 
@@ -20,22 +23,22 @@ String styleRanges(String s, List<StyleRange> ranges) {
   final sorted = List<StyleRange>.from(ranges)
     ..sort((a, b) => a.start.compareTo(b.start));
 
-  final runes = s.runes.toList();
+  final totalWidth = stringWidth(s);
   final buf = StringBuffer();
   var pos = 0;
 
   for (final range in sorted) {
+    final rangeStart = range.start.clamp(0, totalWidth);
+    final rangeEnd = range.end.clamp(0, totalWidth);
+
     // Write unstyled content before this range
-    if (range.start > pos) {
-      buf.write(String.fromCharCodes(
-          runes.sublist(pos, range.start.clamp(0, runes.length))));
+    if (rangeStart > pos) {
+      buf.write(ansi_cut.cut(s, pos, rangeStart));
     }
 
     // Write styled content
-    final rangeEnd = range.end.clamp(0, runes.length);
-    final rangeStart = range.start.clamp(0, runes.length);
     if (rangeStart < rangeEnd) {
-      final content = String.fromCharCodes(runes.sublist(rangeStart, rangeEnd));
+      final content = ansi_cut.cut(s, rangeStart, rangeEnd);
       buf.write(range.style.render(content));
     }
 
@@ -43,31 +46,40 @@ String styleRanges(String s, List<StyleRange> ranges) {
   }
 
   // Write remaining unstyled content
-  if (pos < runes.length) {
-    buf.write(String.fromCharCodes(runes.sublist(pos)));
+  if (pos < totalWidth) {
+    buf.write(ansi_cut.cut(s, pos, totalWidth));
   }
 
   return buf.toString();
 }
 
 /// Apply styles to specific rune indices.
+/// Groups consecutive indices for efficiency.
 String styleRunes(
   String str,
   List<int> indices,
   Style matched,
   Style unmatched,
 ) {
+  if (indices.isEmpty) return unmatched.render(str);
+
   final indexSet = indices.toSet();
   final runes = str.runes.toList();
   final buf = StringBuffer();
 
-  for (var i = 0; i < runes.length; i++) {
-    final char = String.fromCharCode(runes[i]);
-    if (indexSet.contains(i)) {
-      buf.write(matched.render(char));
-    } else {
-      buf.write(unmatched.render(char));
+  // Group consecutive runes for efficiency
+  var i = 0;
+  while (i < runes.length) {
+    final isMatched = indexSet.contains(i);
+    final groupBuf = StringBuffer();
+    var j = i;
+    while (j < runes.length && indexSet.contains(j) == isMatched) {
+      groupBuf.write(String.fromCharCode(runes[j]));
+      j++;
     }
+    final group = groupBuf.toString();
+    buf.write(isMatched ? matched.render(group) : unmatched.render(group));
+    i = j;
   }
 
   return buf.toString();

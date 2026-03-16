@@ -29,6 +29,7 @@ List<LipglossColor> blend1D(int steps, List<LipglossColor> stops) {
 }
 
 /// Blend a 2D gradient grid.
+/// Uses exact pixel offset from true center normalized by diagonal length.
 List<LipglossColor> blend2D(
   int width,
   int height,
@@ -40,21 +41,28 @@ List<LipglossColor> blend2D(
   // Generate 1D gradient along the angle axis
   final diagonal = math.sqrt((width * width + height * height).toDouble());
   final gradientLength = diagonal.ceil();
+  if (gradientLength == 0) return [];
   final gradient = blend1D(gradientLength, stops);
 
   final result = <LipglossColor>[];
   final radians = angle * math.pi / 180.0;
   final cosA = math.cos(radians);
   final sinA = math.sin(radians);
+  final centerX = (width - 1) / 2.0;
+  final centerY = (height - 1) / 2.0;
 
   for (var y = 0; y < height; y++) {
     for (var x = 0; x < width; x++) {
-      // Project (x, y) onto the gradient direction
-      final nx = x / width;
-      final ny = y / height;
-      final projectedPos = (nx * cosA + ny * sinA + 1.0) / 2.0;
-      final idx = (projectedPos * (gradient.length - 1))
-          .round()
+      // Project offset from true center onto gradient direction
+      final dx = x - centerX;
+      final dy = y - centerY;
+      final projection = dx * cosA + dy * sinA;
+      // Normalize to 0..1 range using half the diagonal as the extent
+      final halfDiag = diagonal / 2.0;
+      final normalized =
+          halfDiag > 0 ? (projection / halfDiag + 1.0) / 2.0 : 0.5;
+      final idx = (normalized * (gradient.length - 1))
+          .toInt()
           .clamp(0, gradient.length - 1);
       result.add(gradient[idx]);
     }

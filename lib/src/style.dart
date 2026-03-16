@@ -2,8 +2,6 @@
 // Original: https://github.com/charmbracelet/lipgloss
 // Licensed under MIT by Charmbracelet, Inc.
 
-import 'dart:io';
-
 import 'package:meta/meta.dart';
 
 import 'align.dart';
@@ -11,6 +9,7 @@ import 'ansi/hyperlink.dart' as hl;
 import 'ansi/sgr.dart';
 import 'ansi/truncate.dart' as trunc;
 import 'ansi/width.dart';
+import 'blending.dart';
 import 'border.dart';
 import 'color.dart';
 import 'props.dart';
@@ -516,10 +515,15 @@ class Style {
         alignVertical: v,
       );
 
-  Style inlineMode([bool v = true]) => _copyWith(
+  /// Set inline mode (strips newlines, skips layout).
+  // ignore: non_constant_identifier_names
+  Style inline([bool v = true]) => _copyWith(
         props: _props.set(PropKey.inline),
         inline: v,
       );
+
+  /// Alias for [inline] for backward compatibility.
+  Style inlineMode([bool v = true]) => inline(v);
 
   Style tabWidth(int w) => _copyWith(
         props: _props.set(PropKey.tabWidth),
@@ -1367,34 +1371,101 @@ class Style {
       if (w > contentWidth) contentWidth = w;
     }
 
-    // Build per-side border style functions
+    final leftW = hasLeft ? b.getLeftSize() : 0;
+    final rightW = hasRight ? b.getRightSize() : 0;
+    final totalWidth = contentWidth + leftW + rightW;
+
+    // Check for border gradient blending
+    final blendColors = getBorderForegroundBlend;
+    final useBlend = blendColors != null && blendColors.length >= 2;
+
+    // Gradient arrays per side (null if no blending)
+    List<LipglossColor>? topGradient;
+    List<LipglossColor>? rightGradient;
+    List<LipglossColor>? bottomGradient;
+    List<LipglossColor>? leftGradient;
+
+    if (useBlend) {
+      final topW = hasTop ? contentWidth + leftW + rightW : 0;
+      final rightH = lines.length;
+      final bottomW = hasBottom ? contentWidth + leftW + rightW : 0;
+      final leftH = lines.length;
+      final totalPerimeter = topW + rightH + bottomW + leftH;
+      if (totalPerimeter > 0) {
+        var gradient = blend1D(totalPerimeter, blendColors);
+        // Rotate by offset
+        final offset = getBorderForegroundBlendOffset % gradient.length;
+        if (offset != 0) {
+          gradient = [
+            ...gradient.sublist(offset),
+            ...gradient.sublist(0, offset)
+          ];
+        }
+        // Slice into segments: top, right, bottom (reversed), left (reversed)
+        var idx = 0;
+        if (topW > 0) {
+          topGradient = gradient.sublist(idx, idx + topW);
+          idx += topW;
+        }
+        if (rightH > 0) {
+          rightGradient = gradient.sublist(idx, idx + rightH);
+          idx += rightH;
+        }
+        if (bottomW > 0) {
+          bottomGradient =
+              gradient.sublist(idx, idx + bottomW).reversed.toList();
+          idx += bottomW;
+        }
+        if (leftH > 0) {
+          leftGradient = gradient.sublist(idx, idx + leftH).reversed.toList();
+        }
+      }
+    }
+
+    // Per-side style functions (used when NOT blending)
     String Function(String) styleBorderTop = (s) => s;
     String Function(String) styleBorderRight = (s) => s;
     String Function(String) styleBorderBottom = (s) => s;
     String Function(String) styleBorderLeft = (s) => s;
 
-    void buildSideStyler(LipglossColor fg, LipglossColor bg,
-        void Function(String Function(String)) setter) {
-      final sgr = AnsiStyle();
-      if (fg is! NoColor) sgr.setForeground(fg);
-      if (bg is! NoColor) sgr.setBackground(bg);
-      if (sgr.hasStyle) {
-        setter((str) => str.isEmpty ? str : sgr.styled(str));
+    if (!useBlend) {
+      void buildSideStyler(LipglossColor fg, LipglossColor bg,
+          void Function(String Function(String)) setter) {
+        final sgr = AnsiStyle();
+        if (fg is! NoColor) sgr.setForeground(fg);
+        if (bg is! NoColor) sgr.setBackground(bg);
+        if (sgr.hasStyle) {
+          setter((str) => str.isEmpty ? str : sgr.styled(str));
+        }
       }
+
+      buildSideStyler(getBorderTopForeground, getBorderTopBackground,
+          (fn) => styleBorderTop = fn);
+      buildSideStyler(getBorderRightForeground, getBorderRightBackground,
+          (fn) => styleBorderRight = fn);
+      buildSideStyler(getBorderBottomForeground, getBorderBottomBackground,
+          (fn) => styleBorderBottom = fn);
+      buildSideStyler(getBorderLeftForeground, getBorderLeftBackground,
+          (fn) => styleBorderLeft = fn);
     }
 
-    buildSideStyler(getBorderTopForeground, getBorderTopBackground,
-        (fn) => styleBorderTop = fn);
-    buildSideStyler(getBorderRightForeground, getBorderRightBackground,
-        (fn) => styleBorderRight = fn);
-    buildSideStyler(getBorderBottomForeground, getBorderBottomBackground,
-        (fn) => styleBorderBottom = fn);
-    buildSideStyler(getBorderLeftForeground, getBorderLeftBackground,
-        (fn) => styleBorderLeft = fn);
+    /// Style a single border character with a gradient color.
+    String styleChar(String ch, LipglossColor color) {
+      if (ch.isEmpty) return ch;
+      final sgr = AnsiStyle()..setForeground(color);
+      return sgr.styled(ch);
+    }
 
-    final leftW = hasLeft ? b.getLeftSize() : 0;
-    final rightW = hasRight ? b.getRightSize() : 0;
-    final totalWidth = contentWidth + leftW + rightW;
+    /// Style each character of an edge string with gradient colors.
+    String styleEdgeGradient(String edge, List<LipglossColor> gradient) {
+      final buf = StringBuffer();
+      var gi = 0;
+      for (var i = 0; i < edge.length && gi < gradient.length; i++) {
+        buf.write(styleChar(edge[i], gradient[gi]));
+        gi++;
+      }
+      return buf.toString();
+    }
 
     final buf = StringBuffer();
 
@@ -1406,13 +1477,23 @@ class Style {
         hasRight ? topRightChar : '',
         totalWidth,
       );
-      buf.write(styleBorderTop(topEdge));
+      if (topGradient != null) {
+        buf.write(styleEdgeGradient(topEdge, topGradient));
+      } else {
+        buf.write(styleBorderTop(topEdge));
+      }
       buf.write('\n');
     }
 
     // Content lines with side borders
     for (var i = 0; i < lines.length; i++) {
-      if (hasLeft) buf.write(styleBorderLeft(b.left));
+      if (hasLeft) {
+        if (leftGradient != null && i < leftGradient.length) {
+          buf.write(styleChar(b.left, leftGradient[i]));
+        } else {
+          buf.write(styleBorderLeft(b.left));
+        }
+      }
 
       final line = lines[i];
       final lineWidth = stringWidth(line);
@@ -1422,7 +1503,13 @@ class Style {
       final padNeeded = contentWidth - lineWidth;
       if (padNeeded > 0) buf.write(' ' * padNeeded);
 
-      if (hasRight) buf.write(styleBorderRight(b.right));
+      if (hasRight) {
+        if (rightGradient != null && i < rightGradient.length) {
+          buf.write(styleChar(b.right, rightGradient[i]));
+        } else {
+          buf.write(styleBorderRight(b.right));
+        }
+      }
       if (i < lines.length - 1 || hasBottom) buf.write('\n');
     }
 
@@ -1434,7 +1521,11 @@ class Style {
         hasRight ? bottomRightChar : '',
         totalWidth,
       );
-      buf.write(styleBorderBottom(bottomEdge));
+      if (bottomGradient != null) {
+        buf.write(styleEdgeGradient(bottomEdge, bottomGradient));
+      } else {
+        buf.write(styleBorderBottom(bottomEdge));
+      }
     }
 
     return buf.toString();
@@ -1713,12 +1804,4 @@ class Style {
   }
 }
 
-// ─── Top-level print functions ───
-
-/// Print with style. Avoids collision with Dart built-in `print`.
-void lipPrintln(Object? v) => print(v);
-
-/// Print without trailing newline.
-void lipPrint(Object? v) {
-  stdout.write(v);
-}
+// lipPrint/lipPrintln are in writer.dart with color downsampling support.

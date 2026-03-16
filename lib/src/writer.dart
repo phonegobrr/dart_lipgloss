@@ -4,6 +4,7 @@
 
 import 'dart:io';
 
+import 'ansi/parser.dart';
 import 'color.dart';
 
 /// Terminal color profile.
@@ -73,4 +74,176 @@ LipglossColor downsample(LipglossColor c, ColorProfile profile) {
       if (profile == ColorProfile.ansi256) return rgbToAnsi256(c);
       return c;
   }
+}
+
+/// Downsample ANSI color sequences in a string to fit within [profile].
+///
+/// Parses CSI SGR sequences and downgrades color parameters.
+/// Non-color sequences and plain text pass through unchanged.
+String _downsampleString(String s, ColorProfile profile) {
+  if (profile == ColorProfile.trueColor) return s;
+  if (profile == ColorProfile.ascii) {
+    // Strip all ANSI sequences for ASCII profile
+    final segments = parseAnsiSegments(s);
+    final buf = StringBuffer();
+    for (final seg in segments) {
+      if (!seg.isAnsi) buf.write(seg.text);
+    }
+    return buf.toString();
+  }
+
+  // For ansi and ansi256 profiles, rewrite color parameters in SGR sequences
+  final segments = parseAnsiSegments(s);
+  final buf = StringBuffer();
+  for (final seg in segments) {
+    if (!seg.isAnsi) {
+      buf.write(seg.text);
+      continue;
+    }
+    final seq = seg.text;
+    if (!seq.startsWith('\x1b[') || !seq.endsWith('m')) {
+      buf.write(seq);
+      continue;
+    }
+    // Parse SGR params and rewrite colors
+    final inner = seq.substring(2, seq.length - 1);
+    final params = inner.split(';');
+    final newParams = <String>[];
+    var i = 0;
+    while (i < params.length) {
+      final p = params[i];
+      if ((p == '38' || p == '48') && i + 1 < params.length) {
+        final type = params[i + 1];
+        if (type == '2' && i + 4 < params.length) {
+          // RGB color: 38;2;r;g;b or 48;2;r;g;b
+          final r = int.tryParse(params[i + 2]) ?? 0;
+          final g = int.tryParse(params[i + 3]) ?? 0;
+          final b = int.tryParse(params[i + 4]) ?? 0;
+          final rgb = RGBColor(r, g, b);
+          final down = downsample(rgb, profile);
+          _addColorParams(newParams, p == '38', down);
+          i += 5;
+          continue;
+        } else if (type == '5' && i + 2 < params.length) {
+          // 256 color: 38;5;n or 48;5;n
+          final n = int.tryParse(params[i + 2]) ?? 0;
+          final c = n < 16 ? ANSIColor(n) : ANSI256Color(n);
+          final down = downsample(c, profile);
+          _addColorParams(newParams, p == '38', down);
+          i += 3;
+          continue;
+        }
+      }
+      newParams.add(p);
+      i++;
+    }
+    if (newParams.isEmpty) {
+      buf.write('\x1b[m');
+    } else {
+      buf.write('\x1b[${newParams.join(';')}m');
+    }
+  }
+  return buf.toString();
+}
+
+void _addColorParams(List<String> params, bool isFg, LipglossColor c) {
+  switch (c) {
+    case NoColor():
+      break;
+    case ANSIColor():
+      final base = isFg ? 30 : 40;
+      if (c.value < 8) {
+        params.add('${base + c.value}');
+      } else {
+        params.add('${base + 60 + c.value - 8}');
+      }
+    case ANSI256Color():
+      params.addAll([isFg ? '38' : '48', '5', '${c.value}']);
+    case RGBColor():
+      params.addAll([isFg ? '38' : '48', '2', '${c.r}', '${c.g}', '${c.b}']);
+  }
+}
+
+/// Print with auto-downsampled colors.
+void lipPrintln(Object? v) {
+  final profile = detectColorProfile();
+  print(_downsampleString(v.toString(), profile));
+}
+
+/// Print without trailing newline, with auto-downsampled colors.
+void lipPrint(Object? v) {
+  final profile = detectColorProfile();
+  stdout.write(_downsampleString(v.toString(), profile));
+}
+
+/// Sprint: returns a string with auto-downsampled colors.
+String lipSprint(Object? v) {
+  final profile = detectColorProfile();
+  return _downsampleString(v.toString(), profile);
+}
+
+/// Sprintln: returns a string with newline, with auto-downsampled colors.
+String lipSprintln(Object? v) {
+  final profile = detectColorProfile();
+  return '${_downsampleString(v.toString(), profile)}\n';
+}
+
+/// Sprintf: format and return with auto-downsampled colors.
+String lipSprintf(String fmt, List<Object?> args) {
+  // Dart doesn't have printf; apply downsample to the formatted result
+  var s = fmt;
+  for (final arg in args) {
+    s = s.replaceFirst('%s', arg.toString());
+  }
+  final profile = detectColorProfile();
+  return _downsampleString(s, profile);
+}
+
+/// Fprint: write to a specific sink with auto-downsampled colors.
+void lipFprint(IOSink sink, Object? v) {
+  final profile = detectColorProfile(sink);
+  sink.write(_downsampleString(v.toString(), profile));
+}
+
+/// Fprintln: write with newline to a specific sink with auto-downsampled colors.
+void lipFprintln(IOSink sink, Object? v) {
+  final profile = detectColorProfile(sink);
+  sink.writeln(_downsampleString(v.toString(), profile));
+}
+
+/// Fprintf: format and write to a specific sink with auto-downsampled colors.
+void lipFprintf(IOSink sink, String fmt, List<Object?> args) {
+  var s = fmt;
+  for (final arg in args) {
+    s = s.replaceFirst('%s', arg.toString());
+  }
+  final profile = detectColorProfile(sink);
+  sink.write(_downsampleString(s, profile));
+}
+
+/// Complete: returns a function that selects the appropriate color for the profile.
+typedef CompleteFunc = LipglossColor Function({
+  LipglossColor trueColor,
+  LipglossColor ansi256,
+  LipglossColor ansi,
+});
+
+/// Create a Complete function for the given color profile.
+CompleteFunc complete(ColorProfile profile) {
+  return ({
+    LipglossColor trueColor = const NoColor(),
+    LipglossColor ansi256 = const NoColor(),
+    LipglossColor ansi = const NoColor(),
+  }) {
+    switch (profile) {
+      case ColorProfile.trueColor:
+        return trueColor;
+      case ColorProfile.ansi256:
+        return ansi256;
+      case ColorProfile.ansi:
+        return ansi;
+      case ColorProfile.ascii:
+        return const NoColor();
+    }
+  };
 }

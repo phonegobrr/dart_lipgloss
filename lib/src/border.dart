@@ -2,6 +2,7 @@
 // Original: https://github.com/charmbracelet/lipgloss
 // Licensed under MIT by Charmbracelet, Inc.
 
+import 'package:characters/characters.dart';
 import 'package:meta/meta.dart';
 
 import 'ansi/width.dart';
@@ -232,7 +233,7 @@ const asciiBorder = Border(
 
 // ─── Border rendering helpers ───
 
-/// Render a horizontal border edge.
+/// Render a horizontal border edge, grapheme/display-width aware.
 String renderHorizontalEdge(
     String leftCorner, String fill, String rightCorner, int width) {
   if (fill.isEmpty) return '';
@@ -251,7 +252,19 @@ String renderHorizontalEdge(
     buf.write(fill);
   }
   if (remainder > 0) {
-    buf.write(fill.substring(0, remainder.clamp(0, fill.length)));
+    // Grapheme-aware partial fill
+    var remaining = remainder;
+    for (final grapheme in fill.characters) {
+      final gw = stringWidth(grapheme);
+      if (gw > remaining) break;
+      buf.write(grapheme);
+      remaining -= gw;
+    }
+    // Fill any leftover space
+    while (remaining > 0) {
+      buf.write(' ');
+      remaining--;
+    }
   }
   buf.write(rightCorner);
   return buf.toString();

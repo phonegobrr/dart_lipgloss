@@ -2,8 +2,7 @@
 // Original: https://github.com/charmbracelet/lipgloss
 // Licensed under MIT by Charmbracelet, Inc.
 
-import 'package:characters/characters.dart';
-
+import 'parser.dart';
 import 'strip.dart';
 import 'width.dart';
 
@@ -140,19 +139,79 @@ String _truncateRaw(String s, int targetWidth) {
 }
 
 /// Raw truncation from the left to [targetWidth] visible cells.
+/// ANSI-aware: preserves styling by walking the original string
+/// and tracking SGR state.
 String _truncateLeftRaw(String s, int targetWidth) {
-  // Strip ANSI, measure graphemes from right to left
-  final stripped = stripAnsi(s);
-  final chars = stripped.characters.toList();
-
-  var width = 0;
-  var startIdx = chars.length;
-  for (var i = chars.length - 1; i >= 0; i--) {
-    final w = stringWidth(chars[i]);
-    if (width + w > targetWidth) break;
-    width += w;
-    startIdx = i;
+  // First, compute total visible width and determine the start position
+  final segments = parseAnsiSegments(s);
+  var totalVisibleWidth = 0;
+  for (final seg in segments) {
+    if (!seg.isAnsi) {
+      totalVisibleWidth += stringWidth(seg.text);
+    }
   }
 
-  return chars.sublist(startIdx).join();
+  if (totalVisibleWidth <= targetWidth) return s;
+
+  final skipWidth = totalVisibleWidth - targetWidth;
+
+  // Walk from left, skipping `skipWidth` visible cells, then emit the rest
+  final buf = StringBuffer();
+  var skipped = 0;
+  var emitting = false;
+  final pendingSgr = StringBuffer();
+  var hasPendingSgr = false;
+
+  for (final seg in segments) {
+    if (seg.isAnsi) {
+      final seq = seg.text;
+      if (seq.startsWith('\x1b[') && seq.endsWith('m')) {
+        if (seq == '\x1b[0m' || seq == '\x1b[m') {
+          pendingSgr.clear();
+          hasPendingSgr = false;
+        } else {
+          pendingSgr.write(seq);
+          hasPendingSgr = true;
+        }
+      }
+      if (emitting) {
+        buf.write(seq);
+      }
+      continue;
+    }
+
+    // Text segment
+    if (emitting) {
+      buf.write(seg.text);
+      continue;
+    }
+
+    // Still skipping
+    for (final rune in seg.text.runes) {
+      final w = runeWidth(rune);
+      if (skipped + w > skipWidth) {
+        // Start emitting from here
+        emitting = true;
+        if (hasPendingSgr) {
+          buf.write(pendingSgr);
+        }
+        buf.write(String.fromCharCode(rune));
+      } else {
+        skipped += w;
+        if (skipped >= skipWidth) {
+          emitting = true;
+          if (hasPendingSgr) {
+            buf.write(pendingSgr);
+          }
+        }
+      }
+    }
+  }
+
+  // Close any active SGR style
+  if (hasPendingSgr && buf.isNotEmpty) {
+    buf.write('\x1b[0m');
+  }
+
+  return buf.toString();
 }

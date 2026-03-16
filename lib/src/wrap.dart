@@ -33,11 +33,24 @@ List<String> _wrapLine(String line, int limit, String breakpoints) {
   final currentLine = StringBuffer();
   var currentWidth = 0;
   final penState = AnsiPenState();
+  String? activeLink;
 
   for (final segment in segments) {
     if (segment.isAnsi) {
-      penState.feedSequence(segment.text);
-      currentLine.write(segment.text);
+      final seq = segment.text;
+      penState.feedSequence(seq);
+
+      // Track OSC 8 hyperlink state
+      if (seq.startsWith('\x1b]8;')) {
+        final isClose = seq == '\x1b]8;;\x1b\\' || seq == '\x1b]8;;\x07';
+        if (isClose) {
+          activeLink = null;
+        } else {
+          activeLink = seq;
+        }
+      }
+
+      currentLine.write(seq);
       continue;
     }
 
@@ -47,7 +60,10 @@ List<String> _wrapLine(String line, int limit, String breakpoints) {
       final wordWidth = stringWidth(word);
 
       if (currentWidth + wordWidth > limit && currentWidth > 0) {
-        // Need to wrap - close current style, start new line
+        // Need to wrap - close current hyperlink and style, start new line
+        if (activeLink != null) {
+          currentLine.write('\x1b]8;;\x1b\\');
+        }
         if (penState.hasStyle) {
           currentLine.write('\x1b[0m');
         }
@@ -55,9 +71,12 @@ List<String> _wrapLine(String line, int limit, String breakpoints) {
         currentLine.clear();
         currentWidth = 0;
 
-        // Reapply styles on new line
+        // Reapply styles and hyperlink on new line
         if (penState.hasStyle) {
           currentLine.write(penState.currentStyle);
+        }
+        if (activeLink != null) {
+          currentLine.write(activeLink);
         }
 
         // Skip leading spaces on new line

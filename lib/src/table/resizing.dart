@@ -12,8 +12,10 @@ List<int> optimizedWidths(
   int tableWidth,
   int numColumns,
   bool hasBorderColumn,
-  int borderWidth,
-) {
+  int borderWidth, {
+  bool hasLeftBorder = true,
+  bool hasRightBorder = true,
+}) {
   if (numColumns == 0) return [];
 
   // Calculate natural widths (max content width per column)
@@ -31,9 +33,14 @@ List<int> optimizedWidths(
   // Calculate available width for content
   // Each cell has 1 space padding on each side (2 per cell)
   final cellPaddingOverhead = numColumns * 2;
-  final borderOverhead = hasBorderColumn
-      ? borderWidth * (numColumns + 1)
-      : borderWidth * 2;
+  // Count outer borders only if they exist
+  var borderOverhead = 0;
+  if (hasLeftBorder) borderOverhead += borderWidth;
+  if (hasRightBorder) borderOverhead += borderWidth;
+  // Inner column separators
+  if (hasBorderColumn && numColumns > 1) {
+    borderOverhead += borderWidth * (numColumns - 1);
+  }
   final availableWidth = tableWidth - borderOverhead - cellPaddingOverhead;
 
   if (availableWidth <= 0) return List<int>.filled(numColumns, 1);

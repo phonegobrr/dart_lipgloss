@@ -12,6 +12,9 @@ class Cell {
   const Cell(this.content, [this.style]);
 }
 
+/// Sentinel cell marking a position occupied by a wide character's trailing column.
+const _wideCharContinuation = Cell('');
+
 /// A 2D cell buffer for compositing.
 class Canvas {
   late List<List<Cell?>> _cells;
@@ -43,9 +46,9 @@ class Canvas {
 
         final char = String.fromCharCode(rune);
         _cells[cy][cx] = Cell(char);
-        // For wide characters, fill the next cell with null (occupied)
+        // For wide characters, mark continuation cells
         for (var k = 1; k < w && cx + k < _width; k++) {
-          _cells[cy][cx + k] = null;
+          _cells[cy][cx + k] = _wideCharContinuation;
         }
         cx += w;
       }
@@ -85,6 +88,10 @@ class Canvas {
       for (var x = 0; x < _width; x++) {
         final cell = _cells[y][x];
         if (cell != null) {
+          if (identical(cell, _wideCharContinuation)) {
+            // Skip: this cell is occupied by the trailing column of a wide char
+            continue;
+          }
           if (cell.style != null) {
             buf.write(cell.style!.styled(cell.content));
           } else {

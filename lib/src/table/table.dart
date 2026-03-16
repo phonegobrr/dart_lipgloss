@@ -160,12 +160,15 @@ class Table {
     }
 
     // Calculate column widths
+    final bw = b.left.isNotEmpty ? stringWidth(b.left) : 0;
     final colWidths = optimizedWidths(
       contentWidths,
       _width,
       numCols,
       _borderColumn,
-      _borderLeft || _borderRight ? stringWidth(b.left) : 0,
+      bw,
+      hasLeftBorder: _borderLeft,
+      hasRightBorder: _borderRight,
     );
 
     // If no target width, use natural widths

@@ -189,6 +189,7 @@ const hiddenBorder = Border(
 );
 
 const markdownBorder = Border(
+  top: '-',
   left: '|',
   right: '|',
   middleLeft: '|',

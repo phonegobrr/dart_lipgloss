@@ -47,51 +47,65 @@ String truncateLeft(String s, int width, [String prefix = '']) {
 String _truncateRaw(String s, int targetWidth) {
   final buf = StringBuffer();
   var currentWidth = 0;
-  var inEscape = false;
-  var escBuf = StringBuffer();
-  var hasActiveStyle = false;
+  var hasActiveSgr = false;
 
   final stripped = stripAnsi(s);
   if (stripped.isEmpty) return s;
 
-  // Walk through original string character by character
   var i = 0;
   final codeUnits = s.codeUnits;
-  while (i < codeUnits.length && currentWidth < targetWidth) {
-    if (codeUnits[i] == 0x1B) {
-      // Start of ANSI escape
-      inEscape = true;
-      escBuf = StringBuffer();
-      escBuf.writeCharCode(0x1B);
-      i++;
-      continue;
-    }
 
-    if (inEscape) {
-      escBuf.writeCharCode(codeUnits[i]);
-      // Check for end of CSI sequence
-      if (codeUnits[i] >= 0x40 && codeUnits[i] <= 0x7E && codeUnits[i] != 0x5B) {
-        final seq = escBuf.toString();
-        buf.write(seq);
-        // Track whether we have an active style or a reset
-        if (seq == '\x1b[0m' || seq == '\x1b[m') {
-          hasActiveStyle = false;
-        } else {
-          hasActiveStyle = true;
+  while (i < codeUnits.length && currentWidth < targetWidth) {
+    if (codeUnits[i] == 0x1B && i + 1 < codeUnits.length) {
+      final next = codeUnits[i + 1];
+
+      if (next == 0x5B) {
+        // CSI sequence: ESC [ ... final_byte
+        final escStart = i;
+        i += 2; // skip ESC [
+        while (i < codeUnits.length && codeUnits[i] < 0x40) {
+          i++;
         }
-        inEscape = false;
+        if (i < codeUnits.length) i++; // skip final byte
+        final seq = String.fromCharCodes(codeUnits.sublist(escStart, i));
+        buf.write(seq);
+        // Track SGR state
+        if (seq == '\x1b[0m' || seq == '\x1b[m') {
+          hasActiveSgr = false;
+        } else if (seq.endsWith('m')) {
+          hasActiveSgr = true;
+        }
+        continue;
       }
-      // Check for OSC sequence end (BEL)
-      if (codeUnits[i] == 0x07) {
-        buf.write(escBuf);
-        inEscape = false;
+
+      if (next == 0x5D) {
+        // OSC sequence: ESC ] ... (BEL | ESC \)
+        final escStart = i;
+        i += 2; // skip ESC ]
+        while (i < codeUnits.length) {
+          if (codeUnits[i] == 0x07) {
+            i++;
+            break;
+          }
+          if (codeUnits[i] == 0x1B && i + 1 < codeUnits.length && codeUnits[i + 1] == 0x5C) {
+            i += 2;
+            break;
+          }
+          i++;
+        }
+        buf.write(String.fromCharCodes(codeUnits.sublist(escStart, i)));
+        // OSC sequences do not affect SGR state
+        continue;
       }
-      i++;
+
+      // Other single-char escape
+      buf.writeCharCode(codeUnits[i]);
+      buf.writeCharCode(codeUnits[i + 1]);
+      i += 2;
       continue;
     }
 
     // Regular character - check its width
-    // Handle surrogate pairs
     int codePoint;
     if (codeUnits[i] >= 0xD800 && codeUnits[i] <= 0xDBFF && i + 1 < codeUnits.length) {
       codePoint = 0x10000 + ((codeUnits[i] - 0xD800) << 10) + (codeUnits[i + 1] - 0xDC00);
@@ -111,8 +125,8 @@ String _truncateRaw(String s, int targetWidth) {
     }
   }
 
-  // Close any active style
-  if (hasActiveStyle) {
+  // Close any active SGR style (not OSC sequences)
+  if (hasActiveSgr) {
     buf.write('\x1b[0m');
   }
 

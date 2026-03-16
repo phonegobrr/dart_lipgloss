@@ -181,22 +181,21 @@ void main() {
       expect(result, endsWith('\x1b[0m'));
     });
 
-    test('mid-range cut with active style', () {
+    test('mid-range cut re-emits pending SGR', () {
       final styled = '\x1b[1mhello world\x1b[0m';
       final result = cut(styled, 6, 11);
       expect(result, contains('world'));
-      // Bold started before range, should still be present
-      expect(result, contains('\x1b['));
+      // Bold SGR should be re-emitted before 'world'
+      expect(result, contains('\x1b[1m'));
+      expect(result, endsWith('\x1b[0m'));
     });
 
     test('CJK double-width characters', () {
-      // '你好' = 4 cells (2+2)
       final result = cut('你好world', 0, 4);
       expect(result, contains('你好'));
     });
 
     test('CJK cut at cell boundary', () {
-      // '你好' = 4 cells; 'world' starts at cell 4
       final result = cut('你好world', 4, 9);
       expect(result, equals('world'));
     });
@@ -204,9 +203,35 @@ void main() {
     test('preserves OSC hyperlinks in range', () {
       final linked = '\x1b]8;;https://example.com\x1b\\click here\x1b]8;;\x1b\\';
       final result = cut(linked, 0, 5);
-      // Should contain the OSC open sequence
       expect(result, contains('\x1b]8;;https://example.com\x1b\\'));
       expect(result, contains('click'));
+      // Should close the hyperlink
+      expect(result, contains('\x1b]8;;\x1b\\'));
+    });
+
+    test('no visible chars returns empty not ANSI-only', () {
+      // Range beyond visible content — should return empty, not bare reset
+      final styled = '\x1b[31mhi\x1b[0m';
+      final result = cut(styled, 2, 3);
+      expect(result, equals(''));
+    });
+
+    test('combining characters kept with base', () {
+      // e + combining acute accent (U+0301)
+      final combining = 'e\u0301x';
+      final result = cut(combining, 0, 1);
+      // Should include the combining mark with the base 'e'
+      expect(result, equals('e\u0301'));
+    });
+
+    test('OSC hyperlink mid-cut re-emits opener', () {
+      final linked = '\x1b]8;;https://example.com\x1b\\click here\x1b]8;;\x1b\\';
+      // 'click here' starts at cell 0; cut mid-link
+      final result = cut(linked, 2, 7);
+      expect(result, contains('ick h'));
+      // Should re-emit the hyperlink opener and closer
+      expect(result, contains('\x1b]8;;https://example.com\x1b\\'));
+      expect(result, contains('\x1b]8;;\x1b\\'));
     });
   });
 }

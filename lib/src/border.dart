@@ -70,9 +70,19 @@ class Border {
 
   @override
   int get hashCode => Object.hash(
-        top, bottom, left, right,
-        topLeft, topRight, bottomLeft, bottomRight,
-        middleLeft, middleRight, middle, middleTop, middleBottom,
+        top,
+        bottom,
+        left,
+        right,
+        topLeft,
+        topRight,
+        bottomLeft,
+        bottomRight,
+        middleLeft,
+        middleRight,
+        middle,
+        middleTop,
+        middleBottom,
       );
 }
 
@@ -216,7 +226,8 @@ const asciiBorder = Border(
 // ─── Border rendering helpers ───
 
 /// Render a horizontal border edge.
-String renderHorizontalEdge(String leftCorner, String fill, String rightCorner, int width) {
+String renderHorizontalEdge(
+    String leftCorner, String fill, String rightCorner, int width) {
   if (fill.isEmpty) return '';
   final fillWidth = stringWidth(fill);
   if (fillWidth == 0) return '';

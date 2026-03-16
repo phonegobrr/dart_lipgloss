@@ -20,9 +20,7 @@ void main() {
     ..borderStyleDef(Style().foreground(lipColor('#874BFD')))
     ..styleFunc((row, col) {
       if (row == headerRow) {
-        return Style()
-            .bold()
-            .foreground(lipColor('#FAFAFA'));
+        return Style().bold().foreground(lipColor('#FAFAFA'));
       }
       return const Style();
     });

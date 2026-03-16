@@ -201,7 +201,8 @@ void main() {
     });
 
     test('preserves OSC hyperlinks in range', () {
-      final linked = '\x1b]8;;https://example.com\x1b\\click here\x1b]8;;\x1b\\';
+      final linked =
+          '\x1b]8;;https://example.com\x1b\\click here\x1b]8;;\x1b\\';
       final result = cut(linked, 0, 5);
       expect(result, contains('\x1b]8;;https://example.com\x1b\\'));
       expect(result, contains('click'));
@@ -225,7 +226,8 @@ void main() {
     });
 
     test('OSC hyperlink mid-cut re-emits opener', () {
-      final linked = '\x1b]8;;https://example.com\x1b\\click here\x1b]8;;\x1b\\';
+      final linked =
+          '\x1b]8;;https://example.com\x1b\\click here\x1b]8;;\x1b\\';
       final result = cut(linked, 2, 7);
       expect(result, contains('ick h'));
       expect(result, contains('\x1b]8;;https://example.com\x1b\\'));

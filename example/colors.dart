@@ -24,8 +24,14 @@ void main() {
   // TrueColor hex examples
   print('\nTrueColor hex:');
   final hexColors = [
-    '#FF6B6B', '#FF8E53', '#FFE66D', '#4ECDC4',
-    '#45B7D1', '#7D56F4', '#FF6B9D', '#C7F464',
+    '#FF6B6B',
+    '#FF8E53',
+    '#FFE66D',
+    '#4ECDC4',
+    '#45B7D1',
+    '#7D56F4',
+    '#FF6B9D',
+    '#C7F464',
   ];
   final hexBuf = StringBuffer();
   for (final hex in hexColors) {

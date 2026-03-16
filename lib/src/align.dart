@@ -7,7 +7,8 @@ import 'ansi/width.dart';
 /// Align text horizontally within a bounding box of [width].
 ///
 /// [pos] is 0.0 for left, 0.5 for center, 1.0 for right.
-String alignTextHorizontal(String str, double pos, int width, [String? styleOpen, String? styleClose]) {
+String alignTextHorizontal(String str, double pos, int width,
+    [String? styleOpen, String? styleClose]) {
   final lines = str.split('\n');
   final buf = StringBuffer();
 
@@ -26,7 +27,8 @@ String alignTextHorizontal(String str, double pos, int width, [String? styleOpen
       final rightStr = ' ' * rightPad;
 
       if (styleOpen != null && styleClose != null) {
-        buf.write('$styleOpen$leftStr$styleClose$line$styleOpen$rightStr$styleClose');
+        buf.write(
+            '$styleOpen$leftStr$styleClose$line$styleOpen$rightStr$styleClose');
       } else {
         buf.write('$leftStr$line$rightStr');
       }
@@ -41,7 +43,8 @@ String alignTextHorizontal(String str, double pos, int width, [String? styleOpen
 /// Align text vertically within a bounding box of [height] lines.
 ///
 /// [pos] is 0.0 for top, 0.5 for center, 1.0 for bottom.
-String alignTextVertical(String str, double pos, int height, [String? styleOpen, String? styleClose]) {
+String alignTextVertical(String str, double pos, int height,
+    [String? styleOpen, String? styleClose]) {
   final lines = str.split('\n');
   final contentHeight = lines.length;
 

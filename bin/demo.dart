@@ -215,19 +215,16 @@ void _demoList() {
 
 void _demoTree() {
   final tree = Tree.root('Operating Systems')
-    ..child(
-        Tree.root('Linux')
-          ..child('Ubuntu')
-          ..child('Arch')
-          ..child('Fedora'))
-    ..child(
-        Tree.root('macOS')
-          ..child('Ventura')
-          ..child('Sonoma'))
-    ..child(
-        Tree.root('Windows')
-          ..child('10')
-          ..child('11'));
+    ..child(Tree.root('Linux')
+      ..child('Ubuntu')
+      ..child('Arch')
+      ..child('Fedora'))
+    ..child(Tree.root('macOS')
+      ..child('Ventura')
+      ..child('Sonoma'))
+    ..child(Tree.root('Windows')
+      ..child('10')
+      ..child('11'));
 
   tree.enumerator(roundedEnumerator);
   tree.indenter(roundedIndenter);

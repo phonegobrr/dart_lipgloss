@@ -23,7 +23,8 @@ void main() {
     // Base color
     buf.write(Style()
         .background(base)
-        .foreground(isDarkColor(base) ? lipColor('#FFFFFF') : lipColor('#000000'))
+        .foreground(
+            isDarkColor(base) ? lipColor('#FFFFFF') : lipColor('#000000'))
         .render(' $name '));
 
     // Lighten steps

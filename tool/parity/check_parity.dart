@@ -71,8 +71,7 @@ void main() {
 
 /// Normalize line endings for cross-platform comparison.
 /// Does NOT trim trailing whitespace — exact match is required.
-String _normalizeNewlines(String s) =>
-    s.replaceAll('\r\n', '\n');
+String _normalizeNewlines(String s) => s.replaceAll('\r\n', '\n');
 
 /// Match a golden filename to a render function.
 /// Returns null if no renderer matches.
@@ -171,13 +170,10 @@ String _renderTreeRounded() {
 
 String _renderTreeNested() {
   final t = Tree.root('Root')
-    ..child(
-        Tree.root('Branch A')
-          ..child('Leaf 1')
-          ..child('Leaf 2'))
-    ..child(
-        Tree.root('Branch B')
-          ..child('Leaf 3'))
+    ..child(Tree.root('Branch A')
+      ..child('Leaf 1')
+      ..child('Leaf 2'))
+    ..child(Tree.root('Branch B')..child('Leaf 3'))
     ..child('Leaf C');
   return t.render();
 }
@@ -185,20 +181,17 @@ String _renderTreeNested() {
 // ─── List renderers ───
 
 String _renderListBullet() {
-  final l = LipglossList(['Apple', 'Banana', 'Cherry'])
-    ..enumerator(bullet);
+  final l = LipglossList(['Apple', 'Banana', 'Cherry'])..enumerator(bullet);
   return l.render();
 }
 
 String _renderListArabic() {
-  final l = LipglossList(['Apple', 'Banana', 'Cherry'])
-    ..enumerator(arabic);
+  final l = LipglossList(['Apple', 'Banana', 'Cherry'])..enumerator(arabic);
   return l.render();
 }
 
 String _renderListRoman() {
-  final l = LipglossList(['Apple', 'Banana', 'Cherry'])
-    ..enumerator(roman);
+  final l = LipglossList(['Apple', 'Banana', 'Cherry'])..enumerator(roman);
   return l.render();
 }
 

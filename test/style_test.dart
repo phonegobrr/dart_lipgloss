@@ -85,10 +85,8 @@ void main() {
 
     test('maxWidth truncates', () {
       final result = Style().maxWidth(5).render('hello world');
-      final maxW = result
-          .split('\n')
-          .map(stringWidth)
-          .reduce((a, b) => a > b ? a : b);
+      final maxW =
+          result.split('\n').map(stringWidth).reduce((a, b) => a > b ? a : b);
       expect(maxW, lessThanOrEqualTo(5));
     });
 
@@ -98,19 +96,15 @@ void main() {
     });
 
     test('horizontal frame size', () {
-      final s = Style()
-          .paddingLeft(2)
-          .paddingRight(3)
-          .border(normalBorder);
-      expect(s.getHorizontalFrameSize, equals(2 + 3 + 1 + 1)); // padding + borders
+      final s = Style().paddingLeft(2).paddingRight(3).border(normalBorder);
+      expect(
+          s.getHorizontalFrameSize, equals(2 + 3 + 1 + 1)); // padding + borders
     });
 
     test('vertical frame size', () {
-      final s = Style()
-          .paddingTop(1)
-          .paddingBottom(2)
-          .border(normalBorder);
-      expect(s.getVerticalFrameSize, equals(1 + 2 + 1 + 1)); // padding + borders
+      final s = Style().paddingTop(1).paddingBottom(2).border(normalBorder);
+      expect(
+          s.getVerticalFrameSize, equals(1 + 2 + 1 + 1)); // padding + borders
     });
 
     test('setString sets value', () {
@@ -158,9 +152,7 @@ void main() {
     });
 
     test('transform function applied', () {
-      final result = Style()
-          .transform((s) => s.toUpperCase())
-          .render('hello');
+      final result = Style().transform((s) => s.toUpperCase()).render('hello');
       expect(result, equals('HELLO'));
     });
 

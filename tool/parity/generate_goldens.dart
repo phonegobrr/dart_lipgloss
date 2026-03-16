@@ -9,7 +9,11 @@ void main() {
   _write('test/testdata/table/basic.golden', () {
     final t = Table()
       ..headers(['NAME', 'VALUE'])
-      ..rows([['Alpha', '1'], ['Beta', '2'], ['Gamma', '3']])
+      ..rows([
+        ['Alpha', '1'],
+        ['Beta', '2'],
+        ['Gamma', '3']
+      ])
       ..borderDef(normalBorder)
       ..borderColumn(true);
     return t.render();
@@ -18,7 +22,11 @@ void main() {
   _write('test/testdata/table/rounded.golden', () {
     final t = Table()
       ..headers(['NAME', 'VALUE'])
-      ..rows([['Alpha', '1'], ['Beta', '2'], ['Gamma', '3']])
+      ..rows([
+        ['Alpha', '1'],
+        ['Beta', '2'],
+        ['Gamma', '3']
+      ])
       ..borderDef(roundedBorder)
       ..borderColumn(true);
     return t.render();
@@ -27,7 +35,10 @@ void main() {
   _write('test/testdata/table/no_border.golden', () {
     final t = Table()
       ..headers(['NAME', 'VALUE'])
-      ..rows([['Alpha', '1'], ['Beta', '2']])
+      ..rows([
+        ['Alpha', '1'],
+        ['Beta', '2']
+      ])
       ..borderDef(noBorder)
       ..borderEdges(top: false, bottom: false, left: false, right: false)
       ..borderHeader(false);
@@ -37,7 +48,10 @@ void main() {
   _write('test/testdata/table/columns.golden', () {
     final t = Table()
       ..headers(['A', 'B', 'C'])
-      ..rows([['1', '2', '3'], ['4', '5', '6']])
+      ..rows([
+        ['1', '2', '3'],
+        ['4', '5', '6']
+      ])
       ..borderDef(normalBorder)
       ..borderColumn(true);
     return t.render();
@@ -64,7 +78,9 @@ void main() {
 
   _write('test/testdata/tree/nested.golden', () {
     final t = Tree.root('Root')
-      ..child(Tree.root('Branch A')..child('Leaf 1')..child('Leaf 2'))
+      ..child(Tree.root('Branch A')
+        ..child('Leaf 1')
+        ..child('Leaf 2'))
       ..child(Tree.root('Branch B')..child('Leaf 3'))
       ..child('Leaf C');
     return t.render();

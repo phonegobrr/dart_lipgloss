@@ -11,11 +11,8 @@ void main() {
     x: 0,
     y: 0,
     z: 0,
-    content: Style()
-        .width(40)
-        .height(10)
-        .background(lipColor('#2C3E50'))
-        .render(''),
+    content:
+        Style().width(40).height(10).background(lipColor('#2C3E50')).render(''),
   );
 
   final card1 = Layer(
@@ -43,8 +40,7 @@ void main() {
   );
 
   // Compose and render
-  final compositor = Compositor()
-    ..addLayers([bg, card1, card2]);
+  final compositor = Compositor()..addLayers([bg, card1, card2]);
 
   print(compositor.render());
 }

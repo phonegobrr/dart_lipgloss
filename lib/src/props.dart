@@ -67,8 +67,7 @@ class Props {
   int get bits => _bits;
 
   @override
-  bool operator ==(Object other) =>
-      other is Props && _bits == other._bits;
+  bool operator ==(Object other) => other is Props && _bits == other._bits;
 
   @override
   int get hashCode => _bits.hashCode;

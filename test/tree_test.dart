@@ -24,10 +24,9 @@ void main() {
 
     test('renders nested trees', () {
       final t = Tree.root('Root')
-        ..child(
-            Tree.root('Branch')
-              ..child('Leaf 1')
-              ..child('Leaf 2'))
+        ..child(Tree.root('Branch')
+          ..child('Leaf 1')
+          ..child('Leaf 2'))
         ..child('Other');
       final result = t.render();
       expect(result, contains('Root'));
@@ -63,7 +62,8 @@ void main() {
         ..child('Alpha')
         ..child('Beta')
         ..child('Gamma');
-      final expected = File('test/testdata/tree/basic.golden').readAsStringSync();
+      final expected =
+          File('test/testdata/tree/basic.golden').readAsStringSync();
       expect(t.render(), equals(expected));
     });
 
@@ -74,21 +74,20 @@ void main() {
         ..child('Gamma');
       t.enumerator(roundedEnumerator);
       t.indenter(roundedIndenter);
-      final expected = File('test/testdata/tree/rounded.golden').readAsStringSync();
+      final expected =
+          File('test/testdata/tree/rounded.golden').readAsStringSync();
       expect(t.render(), equals(expected));
     });
 
     test('nested tree matches golden', () {
       final t = Tree.root('Root')
-        ..child(
-            Tree.root('Branch A')
-              ..child('Leaf 1')
-              ..child('Leaf 2'))
-        ..child(
-            Tree.root('Branch B')
-              ..child('Leaf 3'))
+        ..child(Tree.root('Branch A')
+          ..child('Leaf 1')
+          ..child('Leaf 2'))
+        ..child(Tree.root('Branch B')..child('Leaf 3'))
         ..child('Leaf C');
-      final expected = File('test/testdata/tree/nested.golden').readAsStringSync();
+      final expected =
+          File('test/testdata/tree/nested.golden').readAsStringSync();
       expect(t.render(), equals(expected));
     });
   });

@@ -31,9 +31,11 @@ class StringData implements Data {
   int get rows => _data.length;
 
   @override
-  int get columns => _data.isEmpty ? 0 : _data.fold<int>(0, (max, row) {
-    return row.length > max ? row.length : max;
-  });
+  int get columns => _data.isEmpty
+      ? 0
+      : _data.fold<int>(0, (max, row) {
+          return row.length > max ? row.length : max;
+        });
 }
 
 /// Filter wraps Data and shows only selected rows.

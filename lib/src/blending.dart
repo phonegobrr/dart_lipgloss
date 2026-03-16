@@ -53,7 +53,9 @@ List<LipglossColor> blend2D(
       final nx = x / width;
       final ny = y / height;
       final projectedPos = (nx * cosA + ny * sinA + 1.0) / 2.0;
-      final idx = (projectedPos * (gradient.length - 1)).round().clamp(0, gradient.length - 1);
+      final idx = (projectedPos * (gradient.length - 1))
+          .round()
+          .clamp(0, gradient.length - 1);
       result.add(gradient[idx]);
     }
   }
@@ -82,18 +84,30 @@ LipglossColor _blendLab(LipglossColor c1, LipglossColor c2, double t) {
   var gn = g / 255.0;
   var bn = b / 255.0;
 
-  rn = rn > 0.04045 ? math.pow((rn + 0.055) / 1.055, 2.4).toDouble() : rn / 12.92;
-  gn = gn > 0.04045 ? math.pow((gn + 0.055) / 1.055, 2.4).toDouble() : gn / 12.92;
-  bn = bn > 0.04045 ? math.pow((bn + 0.055) / 1.055, 2.4).toDouble() : bn / 12.92;
+  rn = rn > 0.04045
+      ? math.pow((rn + 0.055) / 1.055, 2.4).toDouble()
+      : rn / 12.92;
+  gn = gn > 0.04045
+      ? math.pow((gn + 0.055) / 1.055, 2.4).toDouble()
+      : gn / 12.92;
+  bn = bn > 0.04045
+      ? math.pow((bn + 0.055) / 1.055, 2.4).toDouble()
+      : bn / 12.92;
 
   final x = (rn * 0.4124564 + gn * 0.3575761 + bn * 0.1804375) / 0.950456;
   final y = rn * 0.2126729 + gn * 0.7151522 + bn * 0.0721750;
   final z = (rn * 0.0193339 + gn * 0.1191920 + bn * 0.9503041) / 1.089058;
 
   // XYZ → Lab
-  final fx = x > 0.008856 ? math.pow(x, 1.0 / 3.0).toDouble() : (7.787 * x) + 16.0 / 116.0;
-  final fy = y > 0.008856 ? math.pow(y, 1.0 / 3.0).toDouble() : (7.787 * y) + 16.0 / 116.0;
-  final fz = z > 0.008856 ? math.pow(z, 1.0 / 3.0).toDouble() : (7.787 * z) + 16.0 / 116.0;
+  final fx = x > 0.008856
+      ? math.pow(x, 1.0 / 3.0).toDouble()
+      : (7.787 * x) + 16.0 / 116.0;
+  final fy = y > 0.008856
+      ? math.pow(y, 1.0 / 3.0).toDouble()
+      : (7.787 * y) + 16.0 / 116.0;
+  final fz = z > 0.008856
+      ? math.pow(z, 1.0 / 3.0).toDouble()
+      : (7.787 * z) + 16.0 / 116.0;
 
   final L = (116.0 * fy) - 16.0;
   final a = 500.0 * (fx - fy);
@@ -108,9 +122,13 @@ LipglossColor _blendLab(LipglossColor c1, LipglossColor c2, double t) {
   final fx = a / 500.0 + fy;
   final fz = fy - bLab / 200.0;
 
-  final x = (fx * fx * fx > 0.008856 ? fx * fx * fx : (fx - 16.0 / 116.0) / 7.787) * 0.950456;
+  final x =
+      (fx * fx * fx > 0.008856 ? fx * fx * fx : (fx - 16.0 / 116.0) / 7.787) *
+          0.950456;
   final y = L > 7.9996 ? fy * fy * fy : L / 903.3;
-  final z = (fz * fz * fz > 0.008856 ? fz * fz * fz : (fz - 16.0 / 116.0) / 7.787) * 1.089058;
+  final z =
+      (fz * fz * fz > 0.008856 ? fz * fz * fz : (fz - 16.0 / 116.0) / 7.787) *
+          1.089058;
 
   // XYZ → sRGB
   var rn = x * 3.2404542 + y * -1.5371385 + z * -0.4985314;

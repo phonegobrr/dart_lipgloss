@@ -80,9 +80,8 @@ void main() {
     });
 
     test('render with only top and bottom borders', () {
-      final result = Style()
-          .border(normalBorder, true, false, true, false)
-          .render('x');
+      final result =
+          Style().border(normalBorder, true, false, true, false).render('x');
       expect(result, contains('─'));
       expect(result, isNot(contains('│')));
     });

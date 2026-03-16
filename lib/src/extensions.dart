@@ -23,7 +23,8 @@ extension LipglossStringX on String {
   String lipStrikethrough() => Style().strikethrough().render(this);
 
   /// Quick underline formatting.
-  String lipUnderline() => Style().underline(UnderlineStyle.single).render(this);
+  String lipUnderline() =>
+      Style().underline(UnderlineStyle.single).render(this);
 
   /// Quick foreground color.
   String fg(String hex) => Style().foreground(lipColor(hex)).render(this);

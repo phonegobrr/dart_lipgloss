@@ -27,7 +27,8 @@ String styleRanges(String s, List<StyleRange> ranges) {
   for (final range in sorted) {
     // Write unstyled content before this range
     if (range.start > pos) {
-      buf.write(String.fromCharCodes(runes.sublist(pos, range.start.clamp(0, runes.length))));
+      buf.write(String.fromCharCodes(
+          runes.sublist(pos, range.start.clamp(0, runes.length))));
     }
 
     // Write styled content

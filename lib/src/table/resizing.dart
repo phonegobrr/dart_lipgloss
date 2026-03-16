@@ -52,7 +52,8 @@ List<int> optimizedWidths(
     return _expandWidths(naturalWidths, availableWidth);
   } else {
     // Shrink to fit
-    return _shrinkWidths(naturalWidths, contentWidths, availableWidth, numColumns);
+    return _shrinkWidths(
+        naturalWidths, contentWidths, availableWidth, numColumns);
   }
 }
 

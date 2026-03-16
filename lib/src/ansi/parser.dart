@@ -70,7 +70,9 @@ List<StringSegment> parseAnsiSegments(String s) {
             i++;
             break;
           }
-          if (units[i] == 0x1B && i + 1 < units.length && units[i + 1] == 0x5C) {
+          if (units[i] == 0x1B &&
+              i + 1 < units.length &&
+              units[i + 1] == 0x5C) {
             escBuf.writeCharCode(units[i]);
             escBuf.writeCharCode(units[i + 1]);
             i += 2;

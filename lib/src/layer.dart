@@ -36,11 +36,16 @@ class Layer {
   String get content => _content;
   List<Layer> get children => List.unmodifiable(_children);
 
-  Layer setX(int v) => Layer(id: _id, x: v, y: _y, z: _z, content: _content, children: _children);
-  Layer setY(int v) => Layer(id: _id, x: _x, y: v, z: _z, content: _content, children: _children);
-  Layer setZ(int v) => Layer(id: _id, x: _x, y: _y, z: v, content: _content, children: _children);
-  Layer setId(String v) => Layer(id: v, x: _x, y: _y, z: _z, content: _content, children: _children);
-  Layer setContent(String v) => Layer(id: _id, x: _x, y: _y, z: _z, content: v, children: _children);
+  Layer setX(int v) => Layer(
+      id: _id, x: v, y: _y, z: _z, content: _content, children: _children);
+  Layer setY(int v) => Layer(
+      id: _id, x: _x, y: v, z: _z, content: _content, children: _children);
+  Layer setZ(int v) => Layer(
+      id: _id, x: _x, y: _y, z: v, content: _content, children: _children);
+  Layer setId(String v) =>
+      Layer(id: v, x: _x, y: _y, z: _z, content: _content, children: _children);
+  Layer setContent(String v) =>
+      Layer(id: _id, x: _x, y: _y, z: _z, content: v, children: _children);
 
   Layer addLayers(List<Layer> layers) => Layer(
         id: _id,

@@ -87,7 +87,9 @@ String _truncateRaw(String s, int targetWidth) {
             i++;
             break;
           }
-          if (codeUnits[i] == 0x1B && i + 1 < codeUnits.length && codeUnits[i + 1] == 0x5C) {
+          if (codeUnits[i] == 0x1B &&
+              i + 1 < codeUnits.length &&
+              codeUnits[i + 1] == 0x5C) {
             i += 2;
             break;
           }
@@ -107,8 +109,12 @@ String _truncateRaw(String s, int targetWidth) {
 
     // Regular character - check its width
     int codePoint;
-    if (codeUnits[i] >= 0xD800 && codeUnits[i] <= 0xDBFF && i + 1 < codeUnits.length) {
-      codePoint = 0x10000 + ((codeUnits[i] - 0xD800) << 10) + (codeUnits[i + 1] - 0xDC00);
+    if (codeUnits[i] >= 0xD800 &&
+        codeUnits[i] <= 0xDBFF &&
+        i + 1 < codeUnits.length) {
+      codePoint = 0x10000 +
+          ((codeUnits[i] - 0xD800) << 10) +
+          (codeUnits[i + 1] - 0xDC00);
       final w = runeWidth(codePoint);
       if (currentWidth + w > targetWidth) break;
       currentWidth += w;
@@ -150,4 +156,3 @@ String _truncateLeftRaw(String s, int targetWidth) {
 
   return chars.sublist(startIdx).join();
 }
-

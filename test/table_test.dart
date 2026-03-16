@@ -113,7 +113,8 @@ void main() {
         ])
         ..borderDef(normalBorder)
         ..borderColumn(true);
-      final expected = File('test/testdata/table/basic.golden').readAsStringSync();
+      final expected =
+          File('test/testdata/table/basic.golden').readAsStringSync();
       expect(t.render(), equals(expected));
     });
 
@@ -127,7 +128,8 @@ void main() {
         ])
         ..borderDef(roundedBorder)
         ..borderColumn(true);
-      final expected = File('test/testdata/table/rounded.golden').readAsStringSync();
+      final expected =
+          File('test/testdata/table/rounded.golden').readAsStringSync();
       expect(t.render(), equals(expected));
     });
 
@@ -140,7 +142,8 @@ void main() {
         ])
         ..borderDef(normalBorder)
         ..borderColumn(true);
-      final expected = File('test/testdata/table/columns.golden').readAsStringSync();
+      final expected =
+          File('test/testdata/table/columns.golden').readAsStringSync();
       expect(t.render(), equals(expected));
     });
 
@@ -154,7 +157,8 @@ void main() {
         ..borderDef(noBorder)
         ..borderEdges(top: false, bottom: false, left: false, right: false)
         ..borderHeader(false);
-      final expected = File('test/testdata/table/no_border.golden').readAsStringSync();
+      final expected =
+          File('test/testdata/table/no_border.golden').readAsStringSync();
       expect(t.render(), equals(expected));
     });
   });

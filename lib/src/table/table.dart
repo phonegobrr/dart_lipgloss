@@ -138,14 +138,16 @@ class Table {
     if (borderBg is! NoColor) borderSgr.setBackground(borderBg);
     final hasBorderSgr = borderSgr.hasStyle;
 
-    String sb(String s) => hasBorderSgr && s.isNotEmpty ? borderSgr.styled(s) : s;
+    String sb(String s) =>
+        hasBorderSgr && s.isNotEmpty ? borderSgr.styled(s) : s;
 
     // Measure content widths
     final contentWidths = <List<int>>[];
     if (hasHeaders) {
       final headerWidths = <int>[];
       for (var col = 0; col < numCols; col++) {
-        headerWidths.add(col < _headers.length ? stringWidth(_headers[col]) : 0);
+        headerWidths
+            .add(col < _headers.length ? stringWidth(_headers[col]) : 0);
       }
       contentWidths.add(headerWidths);
     }
@@ -170,7 +172,8 @@ class Table {
     );
 
     // If no target width, use natural widths
-    final effectiveWidths = _width > 0 ? colWidths : _naturalWidths(contentWidths, numCols);
+    final effectiveWidths =
+        _width > 0 ? colWidths : _naturalWidths(contentWidths, numCols);
 
     final buf = StringBuffer();
 
@@ -216,9 +219,8 @@ class Table {
     if (_height > 0 || _yOffset > 0) {
       final lines = result.split('\n');
       final start = _yOffset.clamp(0, lines.length);
-      final end = _height > 0
-          ? (start + _height).clamp(0, lines.length)
-          : lines.length;
+      final end =
+          _height > 0 ? (start + _height).clamp(0, lines.length) : lines.length;
       result = lines.sublist(start, end).join('\n');
     }
 
@@ -289,7 +291,8 @@ class Table {
     return buf.toString();
   }
 
-  String _renderTopBorder(List<int> widths, Border b, String Function(String) sb) {
+  String _renderTopBorder(
+      List<int> widths, Border b, String Function(String) sb) {
     final buf = StringBuffer();
     if (_borderLeft) buf.write(sb(b.topLeft));
 
@@ -306,7 +309,8 @@ class Table {
     return buf.toString();
   }
 
-  String _renderMiddleBorder(List<int> widths, Border b, String Function(String) sb) {
+  String _renderMiddleBorder(
+      List<int> widths, Border b, String Function(String) sb) {
     final buf = StringBuffer();
     if (_borderLeft) buf.write(sb(b.middleLeft));
 
@@ -324,7 +328,8 @@ class Table {
     return buf.toString();
   }
 
-  String _renderBottomBorder(List<int> widths, Border b, String Function(String) sb) {
+  String _renderBottomBorder(
+      List<int> widths, Border b, String Function(String) sb) {
     final buf = StringBuffer();
     if (_borderLeft) buf.write(sb(b.bottomLeft));
 

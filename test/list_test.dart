@@ -59,23 +59,23 @@ void main() {
 
   group('List golden tests', () {
     test('bullet list matches golden', () {
-      final l = LipglossList(['Apple', 'Banana', 'Cherry'])
-        ..enumerator(bullet);
-      final expected = File('test/testdata/list/bullet.golden').readAsStringSync();
+      final l = LipglossList(['Apple', 'Banana', 'Cherry'])..enumerator(bullet);
+      final expected =
+          File('test/testdata/list/bullet.golden').readAsStringSync();
       expect(l.render(), equals(expected));
     });
 
     test('arabic list matches golden', () {
-      final l = LipglossList(['Apple', 'Banana', 'Cherry'])
-        ..enumerator(arabic);
-      final expected = File('test/testdata/list/arabic.golden').readAsStringSync();
+      final l = LipglossList(['Apple', 'Banana', 'Cherry'])..enumerator(arabic);
+      final expected =
+          File('test/testdata/list/arabic.golden').readAsStringSync();
       expect(l.render(), equals(expected));
     });
 
     test('roman list matches golden', () {
-      final l = LipglossList(['Apple', 'Banana', 'Cherry'])
-        ..enumerator(roman);
-      final expected = File('test/testdata/list/roman.golden').readAsStringSync();
+      final l = LipglossList(['Apple', 'Banana', 'Cherry'])..enumerator(roman);
+      final expected =
+          File('test/testdata/list/roman.golden').readAsStringSync();
       expect(l.render(), equals(expected));
     });
   });

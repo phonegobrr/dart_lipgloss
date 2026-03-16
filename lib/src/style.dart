@@ -467,16 +467,18 @@ class Style {
   bool get getReverse => _props.has(PropKey.reverse) ? _reverse : false;
   bool get getStrikethrough =>
       _props.has(PropKey.strikethrough) ? _strikethrough : false;
-  UnderlineStyle get getUnderlineStyle =>
-      _props.has(PropKey.underlineStyle) ? _underlineStyle : UnderlineStyle.none;
+  UnderlineStyle get getUnderlineStyle => _props.has(PropKey.underlineStyle)
+      ? _underlineStyle
+      : UnderlineStyle.none;
   LipglossColor get getUnderlineColor =>
       _props.has(PropKey.underlineColor) ? _underlineColor : const NoColor();
   LipglossColor get getForeground =>
       _props.has(PropKey.foreground) ? _foreground : const NoColor();
   LipglossColor get getBackground =>
       _props.has(PropKey.background) ? _background : const NoColor();
-  LipglossColor get getMarginBackground =>
-      _props.has(PropKey.marginBackground) ? _marginBackground : const NoColor();
+  LipglossColor get getMarginBackground => _props.has(PropKey.marginBackground)
+      ? _marginBackground
+      : const NoColor();
   int get getWidth => _props.has(PropKey.width) ? _width : 0;
   int get getHeight => _props.has(PropKey.height) ? _height : 0;
   int get getMaxWidth => _props.has(PropKey.maxWidth) ? _maxWidth : 0;
@@ -486,25 +488,31 @@ class Style {
   double get getAlignVertical =>
       _props.has(PropKey.alignVertical) ? _alignVertical : 0.0;
   int get getPaddingTop => _props.has(PropKey.paddingTop) ? _paddingTop : 0;
-  int get getPaddingRight => _props.has(PropKey.paddingRight) ? _paddingRight : 0;
+  int get getPaddingRight =>
+      _props.has(PropKey.paddingRight) ? _paddingRight : 0;
   int get getPaddingBottom =>
       _props.has(PropKey.paddingBottom) ? _paddingBottom : 0;
   int get getPaddingLeft => _props.has(PropKey.paddingLeft) ? _paddingLeft : 0;
   int get getMarginTop => _props.has(PropKey.marginTop) ? _marginTop : 0;
   int get getMarginRight => _props.has(PropKey.marginRight) ? _marginRight : 0;
-  int get getMarginBottom => _props.has(PropKey.marginBottom) ? _marginBottom : 0;
+  int get getMarginBottom =>
+      _props.has(PropKey.marginBottom) ? _marginBottom : 0;
   int get getMarginLeft => _props.has(PropKey.marginLeft) ? _marginLeft : 0;
   Border get getBorderStyle =>
       _props.has(PropKey.borderStyle) ? _borderStyle : noBorder;
   bool get getBorderTop => _props.has(PropKey.borderTop) ? _borderTop : false;
-  bool get getBorderRight => _props.has(PropKey.borderRight) ? _borderRight : false;
+  bool get getBorderRight =>
+      _props.has(PropKey.borderRight) ? _borderRight : false;
   bool get getBorderBottom =>
       _props.has(PropKey.borderBottom) ? _borderBottom : false;
-  bool get getBorderLeft => _props.has(PropKey.borderLeft) ? _borderLeft : false;
-  LipglossColor get getBorderForeground =>
-      _props.has(PropKey.borderForeground) ? _borderForeground : const NoColor();
-  LipglossColor get getBorderBackground =>
-      _props.has(PropKey.borderBackground) ? _borderBackground : const NoColor();
+  bool get getBorderLeft =>
+      _props.has(PropKey.borderLeft) ? _borderLeft : false;
+  LipglossColor get getBorderForeground => _props.has(PropKey.borderForeground)
+      ? _borderForeground
+      : const NoColor();
+  LipglossColor get getBorderBackground => _props.has(PropKey.borderBackground)
+      ? _borderBackground
+      : const NoColor();
   bool get getInline => _props.has(PropKey.inline) ? _inline : false;
   int get getTabWidth => _props.has(PropKey.tabWidth) ? _tabWidth : 4;
   bool get getUnderlineSpaces =>
@@ -513,8 +521,7 @@ class Style {
       _props.has(PropKey.strikethroughSpaces) ? _strikethroughSpaces : false;
   bool get getColorWhitespace =>
       _props.has(PropKey.colorWhitespace) ? _colorWhitespace : true;
-  String? get getHyperlink =>
-      _props.has(PropKey.hyperlink) ? _hyperlink : null;
+  String? get getHyperlink => _props.has(PropKey.hyperlink) ? _hyperlink : null;
   String? get getValue => _value;
 
   /// Total horizontal frame size (left border + left padding + right padding + right border).
@@ -536,8 +543,7 @@ class Style {
   }
 
   /// Frame size as (width, height).
-  (int, int) get getFrameSize =>
-      (getHorizontalFrameSize, getVerticalFrameSize);
+  (int, int) get getFrameSize => (getHorizontalFrameSize, getVerticalFrameSize);
 
   // ─── Unsetters ───
 
@@ -550,10 +556,8 @@ class Style {
       _copyWith(props: _props.unset(PropKey.strikethrough));
   Style unsetUnderlineStyle() =>
       _copyWith(props: _props.unset(PropKey.underlineStyle));
-  Style unsetForeground() =>
-      _copyWith(props: _props.unset(PropKey.foreground));
-  Style unsetBackground() =>
-      _copyWith(props: _props.unset(PropKey.background));
+  Style unsetForeground() => _copyWith(props: _props.unset(PropKey.foreground));
+  Style unsetBackground() => _copyWith(props: _props.unset(PropKey.background));
   Style unsetWidth() => _copyWith(props: _props.unset(PropKey.width));
   Style unsetHeight() => _copyWith(props: _props.unset(PropKey.height));
   Style unsetMaxWidth() => _copyWith(props: _props.unset(PropKey.maxWidth));
@@ -562,39 +566,33 @@ class Style {
       _copyWith(props: _props.unset(PropKey.alignHorizontal));
   Style unsetAlignVertical() =>
       _copyWith(props: _props.unset(PropKey.alignVertical));
-  Style unsetPaddingTop() =>
-      _copyWith(props: _props.unset(PropKey.paddingTop));
+  Style unsetPaddingTop() => _copyWith(props: _props.unset(PropKey.paddingTop));
   Style unsetPaddingRight() =>
       _copyWith(props: _props.unset(PropKey.paddingRight));
   Style unsetPaddingBottom() =>
       _copyWith(props: _props.unset(PropKey.paddingBottom));
   Style unsetPaddingLeft() =>
       _copyWith(props: _props.unset(PropKey.paddingLeft));
-  Style unsetMarginTop() =>
-      _copyWith(props: _props.unset(PropKey.marginTop));
+  Style unsetMarginTop() => _copyWith(props: _props.unset(PropKey.marginTop));
   Style unsetMarginRight() =>
       _copyWith(props: _props.unset(PropKey.marginRight));
   Style unsetMarginBottom() =>
       _copyWith(props: _props.unset(PropKey.marginBottom));
-  Style unsetMarginLeft() =>
-      _copyWith(props: _props.unset(PropKey.marginLeft));
+  Style unsetMarginLeft() => _copyWith(props: _props.unset(PropKey.marginLeft));
   Style unsetBorderStyle() =>
       _copyWith(props: _props.unset(PropKey.borderStyle));
-  Style unsetBorderTop() =>
-      _copyWith(props: _props.unset(PropKey.borderTop));
+  Style unsetBorderTop() => _copyWith(props: _props.unset(PropKey.borderTop));
   Style unsetBorderRight() =>
       _copyWith(props: _props.unset(PropKey.borderRight));
   Style unsetBorderBottom() =>
       _copyWith(props: _props.unset(PropKey.borderBottom));
-  Style unsetBorderLeft() =>
-      _copyWith(props: _props.unset(PropKey.borderLeft));
+  Style unsetBorderLeft() => _copyWith(props: _props.unset(PropKey.borderLeft));
   Style unsetBorderForeground() =>
       _copyWith(props: _props.unset(PropKey.borderForeground));
   Style unsetBorderBackground() =>
       _copyWith(props: _props.unset(PropKey.borderBackground));
   Style unsetInline() => _copyWith(props: _props.unset(PropKey.inline));
-  Style unsetHyperlink() =>
-      _copyWith(props: _props.unset(PropKey.hyperlink));
+  Style unsetHyperlink() => _copyWith(props: _props.unset(PropKey.hyperlink));
 
   // ─── Inherit ───
 
@@ -690,9 +688,7 @@ class Style {
   String render([String text = '']) {
     // If _value is set, prepend it
     final v = _value;
-    final str = v != null
-        ? (text.isEmpty ? v : '$v$text')
-        : text;
+    final str = v != null ? (text.isEmpty ? v : '$v$text') : text;
     return _renderPipeline(str);
   }
 
@@ -906,7 +902,8 @@ class Style {
     return buf.toString();
   }
 
-  String _padLine(String line, int contentWidth, int leftPad, int rightPad, AnsiStyle? bgStyle) {
+  String _padLine(String line, int contentWidth, int leftPad, int rightPad,
+      AnsiStyle? bgStyle) {
     final lineWidth = stringWidth(line);
     final rightFill = contentWidth - lineWidth + rightPad;
 
@@ -1040,7 +1037,8 @@ class Style {
 
     final marginBg = getMarginBackground;
     final hasMarginBg = marginBg is! NoColor;
-    final marginSgr = hasMarginBg ? (AnsiStyle()..setBackground(marginBg)) : null;
+    final marginSgr =
+        hasMarginBg ? (AnsiStyle()..setBackground(marginBg)) : null;
 
     String marginStr(int width) {
       final ws = renderWhitespace(width, _marginChar);

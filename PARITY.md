@@ -212,7 +212,34 @@ Every upstream public feature is listed with its status.
 
 | Feature | Status |
 |---------|--------|
-| Self-generated golden tests | Implemented |
+| Golden tests: basic style rendering | Implemented (inline, tabWidth, height, maxHeight, border, setString, alignment) |
+| Golden tests: Style.Inherit behavior | Implemented (formatting inherit, no padding inherit, bg→marginBg) |
+| Golden tests: inline skips layout | Implemented |
+| Golden tests: border shorthand/defaults | Implemented (auto-sides, 1-arg, 2-arg) |
+| Golden tests: width + alignment variants | Implemented (default/center/right) |
+| Golden tests: table (basic/rounded/columns/no_border) | Implemented |
+| Golden tests: table width-constrained wrapping | Implemented |
+| Golden tests: table height/yOffset/overflow | Implemented |
+| Golden tests: table wrap-off with ellipsis | Implemented |
+| Golden tests: table styleFunc | Implemented |
+| Golden tests: tree (basic/rounded/nested) | Implemented |
+| Golden tests: tree hidden/offset/width/multiline | Implemented |
+| Golden tests: list (bullet/arabic/roman) | Implemented |
+| Golden tests: list roman alignment (14 items) | Implemented |
+| Golden tests: list hidden/offset/nested | Implemented |
+| Golden tests: compositor (basic/overlap) | Implemented |
 | Golden comparison tool (compare_goldens.dart) | Implemented |
-| Upstream-vendored golden tests | Implemented (framework ready; vendor goldens to test/testdata/upstream/) |
-| Parity manifest | Implemented (this file) |
+| Parity manifest (no silent omissions) | Implemented (this file) |
+| Upstream-vendored goldens | TODO (vendor from pinned Go lipgloss commit when Go toolchain available) |
+
+## Intentional Divergences
+
+| Divergence | Reason |
+|------------|--------|
+| `LipglossList` class name (not `List`) | Avoids collision with Dart core `List<T>` type |
+| `lipColor()` factory (not `Color()`) | Avoids collision with dart:ui `Color` |
+| `lipPrint()`/`lipPrintln()` (not `Print()`) | Avoids collision with Dart built-in `print()` |
+| Named parameters for functional options | Idiomatic Dart (Go uses variadic functional options) |
+| Immutable class + `_copyWith` | Dart equivalent of Go's value semantics |
+| `LipglossList` separate from Tree | Equivalent features implemented directly; Go uses `List struct { tree *Tree }` |
+| `Canvas` ANSI-preserving (not ultraviolet cells) | ANSI sequences preserved in cells; full styled-cell compositor deferred |

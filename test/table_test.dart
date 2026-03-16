@@ -102,6 +102,116 @@ void main() {
     });
   });
 
+  // ─── Parity behavioral tests ───
+
+  group('Table parity', () {
+    test('width-constrained table wraps cells', () {
+      final t = Table()
+        ..headers(['NAME', 'DESC'])
+        ..rows([
+          ['Alpha', 'A long description that should be wrapped'],
+        ])
+        ..borderDef(normalBorder)
+        ..borderColumn(true)
+        ..tableWidth(40);
+      final result = t.render();
+      expect(result, contains('Alpha'));
+      expect(result, contains('desc')); // partial word from wrapping
+    });
+
+    test('height + yOffset shows subset of rows', () {
+      final t = Table()
+        ..headers(['ID', 'VAL'])
+        ..rows([
+          ['1', 'A'],
+          ['2', 'B'],
+          ['3', 'C'],
+          ['4', 'D'],
+          ['5', 'E'],
+        ])
+        ..borderDef(normalBorder)
+        ..borderColumn(true)
+        ..tableHeight(8)
+        ..yOffset(1);
+      final result = t.render();
+      // Row 1 (0-indexed) is first visible, so '2' should appear
+      expect(result, contains('2'));
+      // Row 0 is skipped
+      expect(result, isNot(contains('│ 1 │')));
+    });
+
+    test('wrap off truncates with ellipsis', () {
+      final t = Table()
+        ..headers(['NAME', 'DESC'])
+        ..rows([
+          ['Alpha', 'A very long description exceeding column width'],
+        ])
+        ..borderDef(normalBorder)
+        ..borderColumn(true)
+        ..tableWidth(30)
+        ..wrapContent(false);
+      final result = t.render();
+      expect(result, contains('…'));
+    });
+
+    test('visibility getters reflect range', () {
+      final t = Table()
+        ..headers(['X'])
+        ..rows([
+          ['A'],
+          ['B'],
+          ['C'],
+          ['D'],
+        ])
+        ..borderDef(normalBorder)
+        ..tableHeight(5)
+        ..yOffset(1);
+      t.render(); // must render to compute visibility
+      expect(t.firstVisibleRowIndex, equals(1));
+      expect(t.lastVisibleRowIndex, greaterThanOrEqualTo(1));
+      expect(t.visibleRows, greaterThan(0));
+    });
+
+    test('clearRows empties data', () {
+      final t = Table()
+        ..headers(['X'])
+        ..rows([
+          ['A'],
+          ['B'],
+        ]);
+      t.clearRows();
+      expect(t.getData.rows, equals(0));
+    });
+
+    test('baseStyle applied to cells', () {
+      final t = Table()
+        ..headers(['X'])
+        ..row(['Y'])
+        ..borderDef(normalBorder)
+        ..baseStyle(Style().bold());
+      final result = t.render();
+      // Bold ANSI should be present
+      expect(result, contains('\x1b['));
+    });
+
+    test('Data interface used directly', () {
+      final d = StringData([
+        ['a', 'b'],
+        ['c', 'd'],
+      ]);
+      final t = Table()
+        ..headers(['H1', 'H2'])
+        ..data(d)
+        ..borderDef(normalBorder)
+        ..borderColumn(true);
+      final result = t.render();
+      expect(result, contains('a'));
+      expect(result, contains('d'));
+    });
+  });
+
+  // ─── Golden file tests ───
+
   group('Table golden tests', () {
     test('basic table matches golden', () {
       final t = Table()
@@ -159,6 +269,74 @@ void main() {
         ..borderHeader(false);
       final expected =
           File('test/testdata/table/no_border.golden').readAsStringSync();
+      expect(t.render(), equals(expected));
+    });
+
+    test('width constrained matches golden', () {
+      final t = Table()
+        ..headers(['NAME', 'DESCRIPTION'])
+        ..rows([
+          ['Alpha', 'A long description that should be wrapped'],
+          ['Beta', 'Short'],
+        ])
+        ..borderDef(normalBorder)
+        ..borderColumn(true)
+        ..tableWidth(40);
+      final expected =
+          File('test/testdata/table/width_constrained.golden')
+              .readAsStringSync();
+      expect(t.render(), equals(expected));
+    });
+
+    test('height offset matches golden', () {
+      final t = Table()
+        ..headers(['ID', 'VAL'])
+        ..rows([
+          ['1', 'A'],
+          ['2', 'B'],
+          ['3', 'C'],
+          ['4', 'D'],
+          ['5', 'E'],
+        ])
+        ..borderDef(normalBorder)
+        ..borderColumn(true)
+        ..tableHeight(8)
+        ..yOffset(1);
+      final expected =
+          File('test/testdata/table/height_offset.golden').readAsStringSync();
+      expect(t.render(), equals(expected));
+    });
+
+    test('wrap off matches golden', () {
+      final t = Table()
+        ..headers(['NAME', 'DESC'])
+        ..rows([
+          ['Alpha', 'A very long description exceeding column width'],
+        ])
+        ..borderDef(normalBorder)
+        ..borderColumn(true)
+        ..tableWidth(30)
+        ..wrapContent(false);
+      final expected =
+          File('test/testdata/table/wrap_off.golden').readAsStringSync();
+      expect(t.render(), equals(expected));
+    });
+
+    test('style func matches golden', () {
+      final t = Table()
+        ..headers(['NAME', 'VALUE'])
+        ..rows([
+          ['Alpha', '1'],
+          ['Beta', '2'],
+        ])
+        ..borderDef(normalBorder)
+        ..borderColumn(true)
+        ..styleFunc((row, col) {
+          if (row == headerRow) return Style().bold();
+          return const Style();
+        });
+      final expected =
+          File('test/testdata/table/style_func.golden').readAsStringSync();
       expect(t.render(), equals(expected));
     });
   });

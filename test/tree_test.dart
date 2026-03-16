@@ -56,6 +56,85 @@ void main() {
     });
   });
 
+  // ─── Parity behavioral tests ───
+
+  group('Tree parity', () {
+    test('hidden tree returns empty string', () {
+      final t = Tree.root('Root')
+        ..child('A')
+        ..hide();
+      expect(t.render(), equals(''));
+    });
+
+    test('hidden leaf is skipped', () {
+      final t = Tree.root('Root')
+        ..child('Visible')
+        ..child(TreeLeaf('Hidden')..hide())
+        ..child('Also Visible');
+      final result = t.render();
+      expect(result, contains('Visible'));
+      expect(result, isNot(contains('Hidden')));
+      expect(result, contains('Also Visible'));
+    });
+
+    test('offset skips first and last children', () {
+      final t = Tree.root('Root')
+        ..child('A')
+        ..child('B')
+        ..child('C')
+        ..child('D')
+        ..child('E');
+      t.offset(1, 1);
+      final result = t.render();
+      expect(result, isNot(contains('A')));
+      expect(result, contains('B'));
+      expect(result, contains('C'));
+      expect(result, contains('D'));
+      expect(result, isNot(contains('E')));
+    });
+
+    test('width pads lines', () {
+      final t = Tree.root('Root')
+        ..child('Short')
+        ..child('X');
+      t.width(30);
+      final result = t.render();
+      final lines = result.split('\n');
+      for (final line in lines) {
+        expect(line.length, greaterThanOrEqualTo(10)); // padded
+      }
+    });
+
+    test('multiline items render correctly', () {
+      final t = Tree.root('Root')
+        ..child('Line1\nLine2\nLine3')
+        ..child('After');
+      final result = t.render();
+      expect(result, contains('Line1'));
+      expect(result, contains('Line2'));
+      expect(result, contains('Line3'));
+      expect(result, contains('After'));
+    });
+
+    test('root mutation', () {
+      final t = Tree.root('Original');
+      t.root('Changed');
+      expect(t.rootValue, equals('Changed'));
+      expect(t.render(), contains('Changed'));
+    });
+
+    test('auto-nesting promotes leaf to subtree', () {
+      final t = Tree.root('Root')
+        ..child('Parent')
+        ..child(Tree.root('')..child('Nested'));
+      final result = t.render();
+      expect(result, contains('Parent'));
+      expect(result, contains('Nested'));
+    });
+  });
+
+  // ─── Golden file tests ───
+
   group('Tree golden tests', () {
     test('basic tree matches golden', () {
       final t = Tree.root('Root')
@@ -88,6 +167,48 @@ void main() {
         ..child('Leaf C');
       final expected =
           File('test/testdata/tree/nested.golden').readAsStringSync();
+      expect(t.render(), equals(expected));
+    });
+
+    test('hidden nodes match golden', () {
+      final t = Tree.root('Root')
+        ..child('Visible')
+        ..child(TreeLeaf('Hidden')..hide())
+        ..child('Also Visible');
+      final expected =
+          File('test/testdata/tree/hidden.golden').readAsStringSync();
+      expect(t.render(), equals(expected));
+    });
+
+    test('offset match golden', () {
+      final t = Tree.root('Root')
+        ..child('A')
+        ..child('B')
+        ..child('C')
+        ..child('D')
+        ..child('E');
+      t.offset(1, 1);
+      final expected =
+          File('test/testdata/tree/offset.golden').readAsStringSync();
+      expect(t.render(), equals(expected));
+    });
+
+    test('width padding match golden', () {
+      final t = Tree.root('Root')
+        ..child('Short')
+        ..child('X');
+      t.width(30);
+      final expected =
+          File('test/testdata/tree/width_padding.golden').readAsStringSync();
+      expect(t.render(), equals(expected));
+    });
+
+    test('multiline match golden', () {
+      final t = Tree.root('Root')
+        ..child('Line1\nLine2\nLine3')
+        ..child('After');
+      final expected =
+          File('test/testdata/tree/multiline.golden').readAsStringSync();
       expect(t.render(), equals(expected));
     });
   });

@@ -150,7 +150,8 @@ class AnsiStyle {
       _strikethrough ||
       _underline != UnderlineStyle.none ||
       _fg != null ||
-      _bg != null;
+      _bg != null ||
+      _underlineColor != null;
 }
 
 /// Convert a LipglossColor to SGR parameters for foreground or background.

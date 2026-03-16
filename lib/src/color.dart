@@ -175,6 +175,18 @@ const _ansi16ToRgb = <(int, int, int)>[
 
 // ─── Color utility functions ───
 
+/// Apply alpha blending to a color (blend toward black).
+/// [a] ranges from 0.0 (fully transparent / black) to 1.0 (fully opaque / original).
+LipglossColor alpha(LipglossColor c, double a) {
+  final rgba = c.rgba;
+  final factor = a.clamp(0.0, 1.0);
+  return RGBColor(
+    (rgba.r * factor).round(),
+    (rgba.g * factor).round(),
+    (rgba.b * factor).round(),
+  );
+}
+
 /// Check if a color is dark (luminance < 0.5).
 bool isDarkColor(LipglossColor c) {
   final rgba = c.rgba;

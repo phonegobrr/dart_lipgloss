@@ -226,12 +226,29 @@ void main() {
 
     test('OSC hyperlink mid-cut re-emits opener', () {
       final linked = '\x1b]8;;https://example.com\x1b\\click here\x1b]8;;\x1b\\';
-      // 'click here' starts at cell 0; cut mid-link
       final result = cut(linked, 2, 7);
       expect(result, contains('ick h'));
-      // Should re-emit the hyperlink opener and closer
       expect(result, contains('\x1b]8;;https://example.com\x1b\\'));
       expect(result, contains('\x1b]8;;\x1b\\'));
+    });
+
+    test('does not consume newlines as combining chars', () {
+      final result = cut('a\nb', 0, 1);
+      expect(result, equals('a'));
+    });
+
+    test('does not consume tabs as combining chars', () {
+      final result = cut('a\tb', 0, 1);
+      expect(result, equals('a'));
+    });
+
+    test('selective SGR reset does not leave spurious reset', () {
+      // \x1b[39m is "default foreground" — not a full reset
+      final result = cut('\x1b[39ma', 0, 1);
+      expect(result, contains('a'));
+      // Should have the selective reset and close
+      expect(result, contains('\x1b[39m'));
+      expect(result, endsWith('\x1b[0m'));
     });
   });
 }

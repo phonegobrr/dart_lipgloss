@@ -1387,9 +1387,9 @@ class Style {
 
     if (useBlend) {
       final topW = hasTop ? contentWidth + leftW + rightW : 0;
-      final rightH = lines.length;
+      final rightH = hasRight ? lines.length : 0;
       final bottomW = hasBottom ? contentWidth + leftW + rightW : 0;
-      final leftH = lines.length;
+      final leftH = hasLeft ? lines.length : 0;
       final totalPerimeter = topW + rightH + bottomW + leftH;
       if (totalPerimeter > 0) {
         var gradient = blend1D(totalPerimeter, blendColors);
@@ -1449,19 +1449,23 @@ class Style {
           (fn) => styleBorderLeft = fn);
     }
 
-    /// Style a single border character with a gradient color.
-    String styleChar(String ch, LipglossColor color) {
+    /// Style a single border character with a gradient foreground color,
+    /// preserving the per-side background color.
+    String styleCharGradient(
+        String ch, LipglossColor fgColor, LipglossColor bgColor) {
       if (ch.isEmpty) return ch;
-      final sgr = AnsiStyle()..setForeground(color);
+      final sgr = AnsiStyle()..setForeground(fgColor);
+      if (bgColor is! NoColor) sgr.setBackground(bgColor);
       return sgr.styled(ch);
     }
 
     /// Style each character of an edge string with gradient colors.
-    String styleEdgeGradient(String edge, List<LipglossColor> gradient) {
+    String styleEdgeGradient(
+        String edge, List<LipglossColor> gradient, LipglossColor bg) {
       final buf = StringBuffer();
       var gi = 0;
       for (var i = 0; i < edge.length && gi < gradient.length; i++) {
-        buf.write(styleChar(edge[i], gradient[gi]));
+        buf.write(styleCharGradient(edge[i], gradient[gi], bg));
         gi++;
       }
       return buf.toString();
@@ -1478,7 +1482,8 @@ class Style {
         totalWidth,
       );
       if (topGradient != null) {
-        buf.write(styleEdgeGradient(topEdge, topGradient));
+        buf.write(
+            styleEdgeGradient(topEdge, topGradient, getBorderTopBackground));
       } else {
         buf.write(styleBorderTop(topEdge));
       }
@@ -1489,7 +1494,8 @@ class Style {
     for (var i = 0; i < lines.length; i++) {
       if (hasLeft) {
         if (leftGradient != null && i < leftGradient.length) {
-          buf.write(styleChar(b.left, leftGradient[i]));
+          buf.write(styleCharGradient(
+              b.left, leftGradient[i], getBorderLeftBackground));
         } else {
           buf.write(styleBorderLeft(b.left));
         }
@@ -1505,7 +1511,8 @@ class Style {
 
       if (hasRight) {
         if (rightGradient != null && i < rightGradient.length) {
-          buf.write(styleChar(b.right, rightGradient[i]));
+          buf.write(styleCharGradient(
+              b.right, rightGradient[i], getBorderRightBackground));
         } else {
           buf.write(styleBorderRight(b.right));
         }
@@ -1522,7 +1529,8 @@ class Style {
         totalWidth,
       );
       if (bottomGradient != null) {
-        buf.write(styleEdgeGradient(bottomEdge, bottomGradient));
+        buf.write(styleEdgeGradient(
+            bottomEdge, bottomGradient, getBorderBottomBackground));
       } else {
         buf.write(styleBorderBottom(bottomEdge));
       }

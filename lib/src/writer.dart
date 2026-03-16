@@ -189,14 +189,10 @@ String lipSprintln(Object? v) {
 }
 
 /// Sprintf: format and return with auto-downsampled colors.
+/// Supports %s, %d, %f, %v (all replaced with toString).
 String lipSprintf(String fmt, List<Object?> args) {
-  // Dart doesn't have printf; apply downsample to the formatted result
-  var s = fmt;
-  for (final arg in args) {
-    s = s.replaceFirst('%s', arg.toString());
-  }
   final profile = detectColorProfile();
-  return _downsampleString(s, profile);
+  return _downsampleString(_simpleFmt(fmt, args), profile);
 }
 
 /// Fprint: write to a specific sink with auto-downsampled colors.
@@ -213,12 +209,61 @@ void lipFprintln(IOSink sink, Object? v) {
 
 /// Fprintf: format and write to a specific sink with auto-downsampled colors.
 void lipFprintf(IOSink sink, String fmt, List<Object?> args) {
-  var s = fmt;
-  for (final arg in args) {
-    s = s.replaceFirst('%s', arg.toString());
-  }
   final profile = detectColorProfile(sink);
-  sink.write(_downsampleString(s, profile));
+  sink.write(_downsampleString(_simpleFmt(fmt, args), profile));
+}
+
+/// Simple Go-style format string replacement.
+/// Supports %s, %d, %f, %v, %x, %o, %b, %% (escape).
+String _simpleFmt(String fmt, List<Object?> args) {
+  final buf = StringBuffer();
+  var argIdx = 0;
+  var i = 0;
+  while (i < fmt.length) {
+    if (fmt[i] == '%' && i + 1 < fmt.length) {
+      final spec = fmt[i + 1];
+      if (spec == '%') {
+        buf.write('%');
+        i += 2;
+        continue;
+      }
+      if (argIdx < args.length) {
+        final arg = args[argIdx++];
+        switch (spec) {
+          case 's':
+          case 'v':
+            buf.write(arg.toString());
+          case 'd':
+            buf.write(
+                (arg is num ? arg.toInt() : int.tryParse(arg.toString()) ?? arg)
+                    .toString());
+          case 'f':
+            buf.write((arg is num
+                    ? arg.toDouble()
+                    : double.tryParse(arg.toString()) ?? arg)
+                .toString());
+          case 'x':
+            final n = arg is int ? arg : int.tryParse(arg.toString());
+            buf.write(n != null ? n.toRadixString(16) : arg.toString());
+          case 'o':
+            final n = arg is int ? arg : int.tryParse(arg.toString());
+            buf.write(n != null ? n.toRadixString(8) : arg.toString());
+          case 'b':
+            final n = arg is int ? arg : int.tryParse(arg.toString());
+            buf.write(n != null ? n.toRadixString(2) : arg.toString());
+          default:
+            buf.write('%$spec');
+        }
+      } else {
+        buf.write('%$spec');
+      }
+      i += 2;
+    } else {
+      buf.write(fmt[i]);
+      i++;
+    }
+  }
+  return buf.toString();
 }
 
 /// Complete: returns a function that selects the appropriate color for the profile.

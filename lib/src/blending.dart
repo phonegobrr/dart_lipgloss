@@ -55,7 +55,8 @@ List<LipglossColor> blend2D(
     for (var x = 0; x < width; x++) {
       // Project offset from true center onto gradient direction
       final dx = x - centerX;
-      final dy = y - centerY;
+      // Negate dy: screen Y increases downward, but math Y is upward
+      final dy = -(y - centerY);
       final projection = dx * cosA + dy * sinA;
       // Normalize to 0..1 range using half the diagonal as the extent
       final halfDiag = diagonal / 2.0;

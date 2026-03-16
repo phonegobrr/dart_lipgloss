@@ -2,7 +2,6 @@
 // Original: https://github.com/charmbracelet/lipgloss
 // Licensed under MIT by Charmbracelet, Inc.
 
-import 'ansi/strip.dart';
 import 'canvas.dart';
 import 'size.dart' as sz;
 
@@ -35,6 +34,12 @@ class Layer {
   int get z => _z;
   String get content => _content;
   List<Layer> get children => List.unmodifiable(_children);
+
+  /// Width of content in display columns.
+  int get width => sz.getWidth(_content);
+
+  /// Height of content in lines.
+  int get height => sz.getHeight(_content);
 
   Layer setX(int v) => Layer(
       id: _id, x: v, y: _y, z: _z, content: _content, children: _children);
@@ -98,7 +103,7 @@ class Compositor {
     final canvas = Canvas(maxWidth, maxHeight);
     for (final layer in allLayers) {
       if (layer.content.isNotEmpty) {
-        canvas.compose(layer.x, layer.y, stripAnsi(layer.content));
+        canvas.compose(layer.x, layer.y, layer.content);
       }
     }
 

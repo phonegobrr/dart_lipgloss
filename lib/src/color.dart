@@ -174,16 +174,12 @@ const _ansi16ToRgb = <(int, int, int)>[
 
 // ─── Color utility functions ───
 
-/// Apply alpha blending to a color (blend toward black).
-/// [a] ranges from 0.0 (fully transparent / black) to 1.0 (fully opaque / original).
+/// Set alpha on a color. Since terminal colors don't have true alpha,
+/// this preserves the R/G/B values (matching Go's Alpha() behavior).
 LipglossColor alpha(LipglossColor c, double a) {
+  if (c is NoColor) return c;
   final rgba = c.rgba;
-  final factor = a.clamp(0.0, 1.0);
-  return RGBColor(
-    (rgba.r * factor).round(),
-    (rgba.g * factor).round(),
-    (rgba.b * factor).round(),
-  );
+  return RGBColor(rgba.r, rgba.g, rgba.b);
 }
 
 /// Check if a color is dark (luminance < 0.5).
@@ -197,10 +193,14 @@ bool isDarkColor(LipglossColor c) {
   return luminance < 0.5;
 }
 
-/// Get the complementary color.
+/// Get the complementary color by rotating hue 180° in HSV space.
 LipglossColor complementary(LipglossColor c) {
+  if (c is NoColor) return c;
   final rgba = c.rgba;
-  return RGBColor(255 - rgba.r, 255 - rgba.g, 255 - rgba.b);
+  final hsv = _rgbToHsv(rgba.r, rgba.g, rgba.b);
+  final newH = (hsv.$1 + 180.0) % 360.0;
+  final rgb = _hsvToRgb(newH, hsv.$2, hsv.$3);
+  return RGBColor(rgb.$1, rgb.$2, rgb.$3);
 }
 
 /// Darken a color by [amount] (0.0 to 1.0).
@@ -303,4 +303,77 @@ LipglossColor completeAdaptiveColor({
     default:
       return const NoColor();
   }
+}
+
+/// Returns a reusable function that selects light or dark color.
+LipglossColor Function(LipglossColor light, LipglossColor dark) lightDark(
+    bool isDark) {
+  return (LipglossColor light, LipglossColor dark) => isDark ? dark : light;
+}
+
+// ─── HSV conversion helpers ───
+
+/// RGB to HSV. Returns (h: 0-360, s: 0-1, v: 0-1).
+(double, double, double) _rgbToHsv(int r, int g, int b) {
+  final rn = r / 255.0;
+  final gn = g / 255.0;
+  final bn = b / 255.0;
+  final cMax = math.max(rn, math.max(gn, bn));
+  final cMin = math.min(rn, math.min(gn, bn));
+  final delta = cMax - cMin;
+
+  double h;
+  if (delta == 0) {
+    h = 0;
+  } else if (cMax == rn) {
+    h = 60.0 * (((gn - bn) / delta) % 6.0);
+  } else if (cMax == gn) {
+    h = 60.0 * (((bn - rn) / delta) + 2.0);
+  } else {
+    h = 60.0 * (((rn - gn) / delta) + 4.0);
+  }
+  if (h < 0) h += 360.0;
+
+  final s = cMax == 0 ? 0.0 : delta / cMax;
+  return (h, s, cMax);
+}
+
+/// HSV to RGB. h: 0-360, s: 0-1, v: 0-1. Returns (r, g, b) as 0-255.
+(int, int, int) _hsvToRgb(double h, double s, double v) {
+  final c = v * s;
+  final x = c * (1.0 - ((h / 60.0) % 2.0 - 1.0).abs());
+  final m = v - c;
+
+  double rn, gn, bn;
+  if (h < 60) {
+    rn = c;
+    gn = x;
+    bn = 0;
+  } else if (h < 120) {
+    rn = x;
+    gn = c;
+    bn = 0;
+  } else if (h < 180) {
+    rn = 0;
+    gn = c;
+    bn = x;
+  } else if (h < 240) {
+    rn = 0;
+    gn = x;
+    bn = c;
+  } else if (h < 300) {
+    rn = x;
+    gn = 0;
+    bn = c;
+  } else {
+    rn = c;
+    gn = 0;
+    bn = x;
+  }
+
+  return (
+    ((rn + m) * 255).round().clamp(0, 255),
+    ((gn + m) * 255).round().clamp(0, 255),
+    ((bn + m) * 255).round().clamp(0, 255),
+  );
 }

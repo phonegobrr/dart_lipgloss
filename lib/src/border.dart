@@ -200,11 +200,18 @@ const hiddenBorder = Border(
 
 const markdownBorder = Border(
   top: '-',
+  bottom: '-',
   left: '|',
   right: '|',
+  topLeft: '|',
+  topRight: '|',
+  bottomLeft: '|',
+  bottomRight: '|',
   middleLeft: '|',
   middleRight: '|',
   middle: '|',
+  middleTop: '|',
+  middleBottom: '|',
 );
 
 const asciiBorder = Border(

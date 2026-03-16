@@ -29,6 +29,8 @@ class Canvas {
   int get height => _height;
 
   /// Place a multi-line string onto the canvas at position (x, y).
+  /// Handles ANSI escape sequences by skipping them for width measurement
+  /// but preserving them in cell content.
   void compose(int x, int y, String content) {
     final lines = content.split('\n');
     for (var row = 0; row < lines.length; row++) {
@@ -36,21 +38,102 @@ class Canvas {
       if (cy < 0 || cy >= _height) continue;
 
       var cx = x;
-      for (final rune in lines[row].runes) {
-        final w = _runeDisplayWidth(rune);
+      final line = lines[row];
+      final codeUnits = line.codeUnits;
+      var i = 0;
+
+      // Buffer to accumulate ANSI sequences before the next visible char
+      final ansiBuf = StringBuffer();
+
+      while (i < codeUnits.length) {
+        // Check for ESC sequence
+        if (codeUnits[i] == 0x1B && i + 1 < codeUnits.length) {
+          final next = codeUnits[i + 1];
+          if (next == 0x5B) {
+            // CSI sequence: ESC [ ... final_byte
+            final start = i;
+            i += 2;
+            while (i < codeUnits.length && codeUnits[i] < 0x40) {
+              i++;
+            }
+            if (i < codeUnits.length) i++; // skip final byte
+            ansiBuf.write(String.fromCharCodes(codeUnits.sublist(start, i)));
+          } else if (next == 0x5D) {
+            // OSC sequence: ESC ] ... (BEL | ESC \)
+            final start = i;
+            i += 2;
+            while (i < codeUnits.length) {
+              if (codeUnits[i] == 0x07) {
+                i++;
+                break;
+              }
+              if (codeUnits[i] == 0x1B &&
+                  i + 1 < codeUnits.length &&
+                  codeUnits[i + 1] == 0x5C) {
+                i += 2;
+                break;
+              }
+              i++;
+            }
+            ansiBuf.write(String.fromCharCodes(codeUnits.sublist(start, i)));
+          } else {
+            ansiBuf.writeCharCode(codeUnits[i]);
+            ansiBuf.writeCharCode(codeUnits[i + 1]);
+            i += 2;
+          }
+          continue;
+        }
+
+        // Regular character
+        int codePoint;
+        int consumed;
+        if (codeUnits[i] >= 0xD800 &&
+            codeUnits[i] <= 0xDBFF &&
+            i + 1 < codeUnits.length) {
+          codePoint = 0x10000 +
+              ((codeUnits[i] - 0xD800) << 10) +
+              (codeUnits[i + 1] - 0xDC00);
+          consumed = 2;
+        } else {
+          codePoint = codeUnits[i];
+          consumed = 1;
+        }
+
+        final w = _runeDisplayWidth(codePoint);
         if (cx < 0) {
           cx += w;
+          i += consumed;
+          ansiBuf.clear();
           continue;
         }
         if (cx >= _width) break;
 
-        final char = String.fromCharCode(rune);
-        _cells[cy][cx] = Cell(char);
+        // Build cell content: any preceding ANSI sequences + the character
+        final char = String.fromCharCode(codePoint);
+        String cellContent;
+        if (ansiBuf.isNotEmpty) {
+          cellContent = '${ansiBuf.toString()}$char';
+          ansiBuf.clear();
+        } else {
+          cellContent = char;
+        }
+
+        _cells[cy][cx] = Cell(cellContent);
         // For wide characters, mark continuation cells
         for (var k = 1; k < w && cx + k < _width; k++) {
           _cells[cy][cx + k] = _wideCharContinuation;
         }
         cx += w;
+        i += consumed;
+      }
+
+      // If there are trailing ANSI sequences (like reset), attach to last cell
+      if (ansiBuf.isNotEmpty && cx > x && cx - 1 < _width) {
+        final lastCx = cx - 1;
+        final lastCell = _cells[cy][lastCx];
+        if (lastCell != null && !identical(lastCell, _wideCharContinuation)) {
+          _cells[cy][lastCx] = Cell('${lastCell.content}${ansiBuf.toString()}');
+        }
       }
     }
   }

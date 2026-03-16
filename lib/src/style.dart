@@ -20,6 +20,9 @@ import 'wrap.dart';
 /// Tab conversion constant. Set tab width to this to disable tab conversion.
 const noTabConversion = -1;
 
+/// Non-breaking space constant.
+const nbsp = '\u00A0';
+
 /// The core style engine. Immutable — every builder method returns a new instance.
 @immutable
 class Style {
@@ -69,6 +72,16 @@ class Style {
   final LipglossColor _borderForeground;
   final LipglossColor _borderBackground;
   final List<LipglossColor>? _borderForegroundBlend;
+  // Per-side border colors
+  final LipglossColor _borderTopForeground;
+  final LipglossColor _borderRightForeground;
+  final LipglossColor _borderBottomForeground;
+  final LipglossColor _borderLeftForeground;
+  final LipglossColor _borderTopBackground;
+  final LipglossColor _borderRightBackground;
+  final LipglossColor _borderBottomBackground;
+  final LipglossColor _borderLeftBackground;
+  final int _borderForegroundBlendOffset;
 
   // Behavior
   final bool _inline;
@@ -78,6 +91,7 @@ class Style {
   final bool _colorWhitespace;
   final String Function(String)? _transform;
   final String? _hyperlink;
+  final Map<String, String>? _hyperlinkParams;
 
   // Internal: string value (from SetString)
   final String? _value;
@@ -119,6 +133,15 @@ class Style {
     LipglossColor borderForeground = const NoColor(),
     LipglossColor borderBackground = const NoColor(),
     List<LipglossColor>? borderForegroundBlend,
+    LipglossColor borderTopForeground = const NoColor(),
+    LipglossColor borderRightForeground = const NoColor(),
+    LipglossColor borderBottomForeground = const NoColor(),
+    LipglossColor borderLeftForeground = const NoColor(),
+    LipglossColor borderTopBackground = const NoColor(),
+    LipglossColor borderRightBackground = const NoColor(),
+    LipglossColor borderBottomBackground = const NoColor(),
+    LipglossColor borderLeftBackground = const NoColor(),
+    int borderForegroundBlendOffset = 0,
     bool inline = false,
     int tabWidth = 4,
     bool underlineSpaces = false,
@@ -126,6 +149,7 @@ class Style {
     bool colorWhitespace = true,
     String Function(String)? transform,
     String? hyperlink,
+    Map<String, String>? hyperlinkParams,
     String? value,
   })  : _props = props,
         _bold = bold,
@@ -163,6 +187,15 @@ class Style {
         _borderForeground = borderForeground,
         _borderBackground = borderBackground,
         _borderForegroundBlend = borderForegroundBlend,
+        _borderTopForeground = borderTopForeground,
+        _borderRightForeground = borderRightForeground,
+        _borderBottomForeground = borderBottomForeground,
+        _borderLeftForeground = borderLeftForeground,
+        _borderTopBackground = borderTopBackground,
+        _borderRightBackground = borderRightBackground,
+        _borderBottomBackground = borderBottomBackground,
+        _borderLeftBackground = borderLeftBackground,
+        _borderForegroundBlendOffset = borderForegroundBlendOffset,
         _inline = inline,
         _tabWidth = tabWidth,
         _underlineSpaces = underlineSpaces,
@@ -170,6 +203,7 @@ class Style {
         _colorWhitespace = colorWhitespace,
         _transform = transform,
         _hyperlink = hyperlink,
+        _hyperlinkParams = hyperlinkParams,
         _value = value;
 
   /// Create a new empty Style.
@@ -211,6 +245,10 @@ class Style {
         props: _props.set(PropKey.underlineStyle),
         underlineStyle: style,
       );
+
+  /// Convenience: set underline on/off (maps to single/none).
+  Style underlineBool(bool v) =>
+      underline(v ? UnderlineStyle.single : UnderlineStyle.none);
 
   Style underlineColor(LipglossColor c) => _copyWith(
         props: _props.set(PropKey.underlineColor),
@@ -324,21 +362,17 @@ class Style {
         marginLeft: v,
       );
 
+  /// Set border style and side flags. CSS-like shorthand for booleans:
+  /// 1 arg = all sides, 2 = vert/horiz, 3 = top/horiz/bottom, 4 = top/right/bottom/left
   Style border(Border b, [bool? top, bool? right, bool? bottom, bool? left]) {
     var p = _props.set(PropKey.borderStyle);
-    var bt = top ?? true;
-    var br = right ?? true;
-    var bb = bottom ?? true;
-    var bl = left ?? true;
 
-    // If only top is specified, use it for all sides
-    if (top != null && right == null && bottom == null && left == null) {
-      bt = top;
-      br = top;
-      bb = top;
-      bl = top;
+    if (top == null && right == null && bottom == null && left == null) {
+      // No side args: set style only, don't set side flags
+      return _copyWith(props: p, borderStyle: b);
     }
 
+    final sides = _whichSidesBool(top!, right, bottom, left);
     p = p
         .set(PropKey.borderTop)
         .set(PropKey.borderRight)
@@ -348,10 +382,10 @@ class Style {
     return _copyWith(
       props: p,
       borderStyle: b,
-      borderTop: bt,
-      borderRight: br,
-      borderBottom: bb,
-      borderLeft: bl,
+      borderTop: sides.top,
+      borderRight: sides.right,
+      borderBottom: sides.bottom,
+      borderLeft: sides.left,
     );
   }
 
@@ -380,14 +414,71 @@ class Style {
         borderLeft: v,
       );
 
-  Style borderForeground(LipglossColor c) => _copyWith(
-        props: _props.set(PropKey.borderForeground),
-        borderForeground: c,
-      );
+  /// Set border foreground as CSS-style shorthand (1-4 args).
+  Style borderForeground(LipglossColor c,
+      [LipglossColor? c2, LipglossColor? c3, LipglossColor? c4]) {
+    final sides = _whichSidesColor(c, c2, c3, c4);
+    return _copyWith(
+      props: _props
+          .set(PropKey.borderTopForeground)
+          .set(PropKey.borderRightForeground)
+          .set(PropKey.borderBottomForeground)
+          .set(PropKey.borderLeftForeground),
+      borderTopForeground: sides.top,
+      borderRightForeground: sides.right,
+      borderBottomForeground: sides.bottom,
+      borderLeftForeground: sides.left,
+    );
+  }
 
-  Style borderBackground(LipglossColor c) => _copyWith(
-        props: _props.set(PropKey.borderBackground),
-        borderBackground: c,
+  /// Set border background as CSS-style shorthand (1-4 args).
+  Style borderBackground(LipglossColor c,
+      [LipglossColor? c2, LipglossColor? c3, LipglossColor? c4]) {
+    final sides = _whichSidesColor(c, c2, c3, c4);
+    return _copyWith(
+      props: _props
+          .set(PropKey.borderTopBackground)
+          .set(PropKey.borderRightBackground)
+          .set(PropKey.borderBottomBackground)
+          .set(PropKey.borderLeftBackground),
+      borderTopBackground: sides.top,
+      borderRightBackground: sides.right,
+      borderBottomBackground: sides.bottom,
+      borderLeftBackground: sides.left,
+    );
+  }
+
+  Style borderTopForeground(LipglossColor c) => _copyWith(
+        props: _props.set(PropKey.borderTopForeground),
+        borderTopForeground: c,
+      );
+  Style borderRightForeground(LipglossColor c) => _copyWith(
+        props: _props.set(PropKey.borderRightForeground),
+        borderRightForeground: c,
+      );
+  Style borderBottomForeground(LipglossColor c) => _copyWith(
+        props: _props.set(PropKey.borderBottomForeground),
+        borderBottomForeground: c,
+      );
+  Style borderLeftForeground(LipglossColor c) => _copyWith(
+        props: _props.set(PropKey.borderLeftForeground),
+        borderLeftForeground: c,
+      );
+  Style borderTopBackground(LipglossColor c) => _copyWith(
+        props: _props.set(PropKey.borderTopBackground),
+        borderTopBackground: c,
+      );
+  Style borderRightBackground(LipglossColor c) => _copyWith(
+        props: _props.set(PropKey.borderRightBackground),
+        borderRightBackground: c,
+      );
+  Style borderBottomBackground(LipglossColor c) => _copyWith(
+        props: _props.set(PropKey.borderBottomBackground),
+        borderBottomBackground: c,
+      );
+  Style borderLeftBackground(LipglossColor c) => _copyWith(
+        props: _props.set(PropKey.borderLeftBackground),
+        borderLeftBackground: c,
       );
 
   Style borderForegroundBlend(List<LipglossColor> colors) => _copyWith(
@@ -395,11 +486,25 @@ class Style {
         borderForegroundBlend: colors,
       );
 
-  Style align(double horizontal, [double? vertical]) => _copyWith(
-        props: _props.set(PropKey.alignHorizontal).set(PropKey.alignVertical),
-        alignHorizontal: horizontal,
-        alignVertical: vertical ?? horizontal,
+  Style borderForegroundBlendOffset(int v) => _copyWith(
+        props: _props.set(PropKey.borderForegroundBlendOffset),
+        borderForegroundBlendOffset: v,
       );
+
+  /// Set alignment. 1 arg = horizontal only. 2 args = horizontal + vertical.
+  Style align(double horizontal, [double? vertical]) {
+    if (vertical == null) {
+      return _copyWith(
+        props: _props.set(PropKey.alignHorizontal),
+        alignHorizontal: horizontal,
+      );
+    }
+    return _copyWith(
+      props: _props.set(PropKey.alignHorizontal).set(PropKey.alignVertical),
+      alignHorizontal: horizontal,
+      alignVertical: vertical,
+    );
+  }
 
   Style alignHorizontal(double v) => _copyWith(
         props: _props.set(PropKey.alignHorizontal),
@@ -441,9 +546,12 @@ class Style {
         transform: fn,
       );
 
-  Style setHyperlink(String url) => _copyWith(
-        props: _props.set(PropKey.hyperlink),
+  Style setHyperlink(String url, [Map<String, String>? params]) => _copyWith(
+        props: params != null
+            ? _props.set(PropKey.hyperlink).set(PropKey.hyperlinkParams)
+            : _props.set(PropKey.hyperlink),
         hyperlink: url,
+        hyperlinkParams: params,
       );
 
   Style paddingChar(String c) => _copyWith(
@@ -456,7 +564,14 @@ class Style {
         marginChar: c,
       );
 
-  Style setString(String s) => _copyWith(value: s);
+  /// Set the string value. Multiple strings are joined with spaces.
+  Style setString(String s, [List<String>? more]) {
+    final joined = more != null ? [s, ...more].join(' ') : s;
+    return _copyWith(value: joined);
+  }
+
+  /// Clear the string value.
+  Style unsetString() => _copyWith(clearValue: true);
 
   // ─── Getters ───
 
@@ -522,24 +637,129 @@ class Style {
   bool get getColorWhitespace =>
       _props.has(PropKey.colorWhitespace) ? _colorWhitespace : true;
   String? get getHyperlink => _props.has(PropKey.hyperlink) ? _hyperlink : null;
+  Map<String, String>? get getHyperlinkParams =>
+      _props.has(PropKey.hyperlinkParams) ? _hyperlinkParams : null;
   String? get getValue => _value;
+  String get getPaddingChar =>
+      _props.has(PropKey.paddingChar) ? _paddingChar : ' ';
+  String get getMarginChar =>
+      _props.has(PropKey.marginChar) ? _marginChar : ' ';
+  String Function(String)? get getTransform =>
+      _props.has(PropKey.transform) ? _transform : null;
+  bool get getUnderline => getUnderlineStyle != UnderlineStyle.none;
 
-  /// Total horizontal frame size (left border + left padding + right padding + right border).
-  int get getHorizontalFrameSize {
-    var size = getPaddingLeft + getPaddingRight;
+  // Per-side border color getters
+  LipglossColor get getBorderTopForeground =>
+      _props.has(PropKey.borderTopForeground)
+          ? _borderTopForeground
+          : getBorderForeground;
+  LipglossColor get getBorderRightForeground =>
+      _props.has(PropKey.borderRightForeground)
+          ? _borderRightForeground
+          : getBorderForeground;
+  LipglossColor get getBorderBottomForeground =>
+      _props.has(PropKey.borderBottomForeground)
+          ? _borderBottomForeground
+          : getBorderForeground;
+  LipglossColor get getBorderLeftForeground =>
+      _props.has(PropKey.borderLeftForeground)
+          ? _borderLeftForeground
+          : getBorderForeground;
+  LipglossColor get getBorderTopBackground =>
+      _props.has(PropKey.borderTopBackground)
+          ? _borderTopBackground
+          : getBorderBackground;
+  LipglossColor get getBorderRightBackground =>
+      _props.has(PropKey.borderRightBackground)
+          ? _borderRightBackground
+          : getBorderBackground;
+  LipglossColor get getBorderBottomBackground =>
+      _props.has(PropKey.borderBottomBackground)
+          ? _borderBottomBackground
+          : getBorderBackground;
+  LipglossColor get getBorderLeftBackground =>
+      _props.has(PropKey.borderLeftBackground)
+          ? _borderLeftBackground
+          : getBorderBackground;
+  int get getBorderForegroundBlendOffset =>
+      _props.has(PropKey.borderForegroundBlendOffset)
+          ? _borderForegroundBlendOffset
+          : 0;
+  List<LipglossColor>? get getBorderForegroundBlend =>
+      _props.has(PropKey.borderForegroundBlend) ? _borderForegroundBlend : null;
+
+  // Convenience aggregate getters
+  int get getHorizontalPadding => getPaddingLeft + getPaddingRight;
+  int get getVerticalPadding => getPaddingTop + getPaddingBottom;
+  int get getHorizontalMargins => getMarginLeft + getMarginRight;
+  int get getVerticalMargins => getMarginTop + getMarginBottom;
+  (double, double) get getAlign => (getAlignHorizontal, getAlignVertical);
+  Border get getBorder => getBorderStyle;
+  (int, int, int, int) get getMargin =>
+      (getMarginTop, getMarginRight, getMarginBottom, getMarginLeft);
+  (int, int, int, int) get getPadding =>
+      (getPaddingTop, getPaddingRight, getPaddingBottom, getPaddingLeft);
+
+  /// Whether border style is set but no individual side flags are set.
+  bool get _isBorderStyleSetWithoutSides {
     final b = getBorderStyle;
-    if (getBorderLeft) size += b.getLeftSize();
-    if (getBorderRight) size += b.getRightSize();
-    return size;
+    final topSet = _props.has(PropKey.borderTop);
+    final rightSet = _props.has(PropKey.borderRight);
+    final bottomSet = _props.has(PropKey.borderBottom);
+    final leftSet = _props.has(PropKey.borderLeft);
+    return b != noBorder && !(topSet || rightSet || bottomSet || leftSet);
   }
 
-  /// Total vertical frame size (top border + top padding + bottom padding + bottom border).
+  // Per-side border size getters accounting for _isBorderStyleSetWithoutSides
+  int get getBorderTopSize {
+    if (getBorderTop || _isBorderStyleSetWithoutSides) {
+      return getBorderStyle.getTopSize();
+    }
+    return 0;
+  }
+
+  int get getBorderBottomSize {
+    if (getBorderBottom || _isBorderStyleSetWithoutSides) {
+      return getBorderStyle.getBottomSize();
+    }
+    return 0;
+  }
+
+  int get getBorderLeftSize {
+    if (getBorderLeft || _isBorderStyleSetWithoutSides) {
+      return getBorderStyle.getLeftSize();
+    }
+    return 0;
+  }
+
+  int get getBorderRightSize {
+    if (getBorderRight || _isBorderStyleSetWithoutSides) {
+      return getBorderStyle.getRightSize();
+    }
+    return 0;
+  }
+
+  int get getHorizontalBorderSize => getBorderLeftSize + getBorderRightSize;
+  int get getVerticalBorderSize => getBorderTopSize + getBorderBottomSize;
+
+  /// Total horizontal frame size (margins + borders + padding).
+  int get getHorizontalFrameSize {
+    return getMarginLeft +
+        getMarginRight +
+        getPaddingLeft +
+        getPaddingRight +
+        getBorderLeftSize +
+        getBorderRightSize;
+  }
+
+  /// Total vertical frame size (margins + borders + padding).
   int get getVerticalFrameSize {
-    var size = getPaddingTop + getPaddingBottom;
-    final b = getBorderStyle;
-    if (getBorderTop) size += b.getTopSize();
-    if (getBorderBottom) size += b.getBottomSize();
-    return size;
+    return getMarginTop +
+        getMarginBottom +
+        getPaddingTop +
+        getPaddingBottom +
+        getBorderTopSize +
+        getBorderBottomSize;
   }
 
   /// Frame size as (width, height).
@@ -556,6 +776,8 @@ class Style {
       _copyWith(props: _props.unset(PropKey.strikethrough));
   Style unsetUnderlineStyle() =>
       _copyWith(props: _props.unset(PropKey.underlineStyle));
+  Style unsetUnderline() =>
+      _copyWith(props: _props.unset(PropKey.underlineStyle));
   Style unsetForeground() => _copyWith(props: _props.unset(PropKey.foreground));
   Style unsetBackground() => _copyWith(props: _props.unset(PropKey.background));
   Style unsetWidth() => _copyWith(props: _props.unset(PropKey.width));
@@ -566,6 +788,9 @@ class Style {
       _copyWith(props: _props.unset(PropKey.alignHorizontal));
   Style unsetAlignVertical() =>
       _copyWith(props: _props.unset(PropKey.alignVertical));
+  Style unsetAlign() => _copyWith(
+      props:
+          _props.unset(PropKey.alignHorizontal).unset(PropKey.alignVertical));
   Style unsetPaddingTop() => _copyWith(props: _props.unset(PropKey.paddingTop));
   Style unsetPaddingRight() =>
       _copyWith(props: _props.unset(PropKey.paddingRight));
@@ -573,12 +798,26 @@ class Style {
       _copyWith(props: _props.unset(PropKey.paddingBottom));
   Style unsetPaddingLeft() =>
       _copyWith(props: _props.unset(PropKey.paddingLeft));
+  Style unsetPadding() => _copyWith(
+      props: _props
+          .unset(PropKey.paddingTop)
+          .unset(PropKey.paddingRight)
+          .unset(PropKey.paddingBottom)
+          .unset(PropKey.paddingLeft)
+          .unset(PropKey.paddingChar));
   Style unsetMarginTop() => _copyWith(props: _props.unset(PropKey.marginTop));
   Style unsetMarginRight() =>
       _copyWith(props: _props.unset(PropKey.marginRight));
   Style unsetMarginBottom() =>
       _copyWith(props: _props.unset(PropKey.marginBottom));
   Style unsetMarginLeft() => _copyWith(props: _props.unset(PropKey.marginLeft));
+  Style unsetMargins() => _copyWith(
+      props: _props
+          .unset(PropKey.marginTop)
+          .unset(PropKey.marginRight)
+          .unset(PropKey.marginBottom)
+          .unset(PropKey.marginLeft)
+          .unset(PropKey.marginChar));
   Style unsetBorderStyle() =>
       _copyWith(props: _props.unset(PropKey.borderStyle));
   Style unsetBorderTop() => _copyWith(props: _props.unset(PropKey.borderTop));
@@ -587,17 +826,63 @@ class Style {
   Style unsetBorderBottom() =>
       _copyWith(props: _props.unset(PropKey.borderBottom));
   Style unsetBorderLeft() => _copyWith(props: _props.unset(PropKey.borderLeft));
-  Style unsetBorderForeground() =>
-      _copyWith(props: _props.unset(PropKey.borderForeground));
-  Style unsetBorderBackground() =>
-      _copyWith(props: _props.unset(PropKey.borderBackground));
+  Style unsetBorderForeground() => _copyWith(
+      props: _props
+          .unset(PropKey.borderForeground)
+          .unset(PropKey.borderTopForeground)
+          .unset(PropKey.borderRightForeground)
+          .unset(PropKey.borderBottomForeground)
+          .unset(PropKey.borderLeftForeground));
+  Style unsetBorderBackground() => _copyWith(
+      props: _props
+          .unset(PropKey.borderBackground)
+          .unset(PropKey.borderTopBackground)
+          .unset(PropKey.borderRightBackground)
+          .unset(PropKey.borderBottomBackground)
+          .unset(PropKey.borderLeftBackground));
+  Style unsetBorderTopForeground() =>
+      _copyWith(props: _props.unset(PropKey.borderTopForeground));
+  Style unsetBorderRightForeground() =>
+      _copyWith(props: _props.unset(PropKey.borderRightForeground));
+  Style unsetBorderBottomForeground() =>
+      _copyWith(props: _props.unset(PropKey.borderBottomForeground));
+  Style unsetBorderLeftForeground() =>
+      _copyWith(props: _props.unset(PropKey.borderLeftForeground));
+  Style unsetBorderTopBackground() =>
+      _copyWith(props: _props.unset(PropKey.borderTopBackground));
+  Style unsetBorderRightBackground() =>
+      _copyWith(props: _props.unset(PropKey.borderRightBackground));
+  Style unsetBorderBottomBackground() =>
+      _copyWith(props: _props.unset(PropKey.borderBottomBackground));
+  Style unsetBorderLeftBackground() =>
+      _copyWith(props: _props.unset(PropKey.borderLeftBackground));
+  Style unsetBorderForegroundBlend() =>
+      _copyWith(props: _props.unset(PropKey.borderForegroundBlend));
+  Style unsetBorderForegroundBlendOffset() =>
+      _copyWith(props: _props.unset(PropKey.borderForegroundBlendOffset));
   Style unsetInline() => _copyWith(props: _props.unset(PropKey.inline));
-  Style unsetHyperlink() => _copyWith(props: _props.unset(PropKey.hyperlink));
+  Style unsetHyperlink() => _copyWith(
+      props: _props.unset(PropKey.hyperlink).unset(PropKey.hyperlinkParams));
+  Style unsetTransform() => _copyWith(props: _props.unset(PropKey.transform));
+  Style unsetTabWidth() => _copyWith(props: _props.unset(PropKey.tabWidth));
+  Style unsetColorWhitespace() =>
+      _copyWith(props: _props.unset(PropKey.colorWhitespace));
+  Style unsetUnderlineSpaces() =>
+      _copyWith(props: _props.unset(PropKey.underlineSpaces));
+  Style unsetStrikethroughSpaces() =>
+      _copyWith(props: _props.unset(PropKey.strikethroughSpaces));
+  Style unsetMarginBackground() =>
+      _copyWith(props: _props.unset(PropKey.marginBackground));
+  Style unsetPaddingChar() =>
+      _copyWith(props: _props.unset(PropKey.paddingChar));
+  Style unsetMarginChar() => _copyWith(props: _props.unset(PropKey.marginChar));
+  Style unsetUnderlineColor() =>
+      _copyWith(props: _props.unset(PropKey.underlineColor));
 
   // ─── Inherit ───
 
   /// Copies properties from [other] that are not set on this Style.
-  /// Margins are NOT inherited per Lip Gloss semantics.
+  /// Margins and padding are NOT inherited per Lip Gloss v2 semantics.
   Style inherit(Style other) {
     var s = this;
 
@@ -632,28 +917,15 @@ class Style {
     if (!_props.has(PropKey.background) &&
         other._props.has(PropKey.background)) {
       s = s.background(other._background);
+      // Propagate background to margin background if neither has it set
+      if (!_props.has(PropKey.marginBackground) &&
+          !other._props.has(PropKey.marginBackground)) {
+        s = s.marginBackground(other._background);
+      }
     }
     if (!_props.has(PropKey.underlineColor) &&
         other._props.has(PropKey.underlineColor)) {
       s = s.underlineColor(other._underlineColor);
-    }
-
-    // Layout (padding inherited, NOT margins)
-    if (!_props.has(PropKey.paddingTop) &&
-        other._props.has(PropKey.paddingTop)) {
-      s = s.paddingTop(other._paddingTop);
-    }
-    if (!_props.has(PropKey.paddingRight) &&
-        other._props.has(PropKey.paddingRight)) {
-      s = s.paddingRight(other._paddingRight);
-    }
-    if (!_props.has(PropKey.paddingBottom) &&
-        other._props.has(PropKey.paddingBottom)) {
-      s = s.paddingBottom(other._paddingBottom);
-    }
-    if (!_props.has(PropKey.paddingLeft) &&
-        other._props.has(PropKey.paddingLeft)) {
-      s = s.paddingLeft(other._paddingLeft);
     }
 
     // Inline, tab width
@@ -684,12 +956,27 @@ class Style {
   // ─── Render ───
 
   /// Render text with this style applied.
-  /// This is a pure function — no I/O, no terminal detection.
-  String render([String text = '']) {
-    // If _value is set, prepend it
+  /// Accepts a single string or multiple strings joined with spaces per Go semantics.
+  String render([Object? textOrStrs]) {
+    if (textOrStrs == null) {
+      return _renderPipeline(_value ?? '');
+    }
+    if (textOrStrs is List<String>) {
+      final allStrs = _value != null ? [_value, ...textOrStrs] : textOrStrs;
+      return _renderPipeline(allStrs.join(' '));
+    }
+    final text = textOrStrs.toString();
     final v = _value;
-    final str = v != null ? (text.isEmpty ? v : '$v$text') : text;
+    final str = v != null ? (text.isEmpty ? v : '$v $text') : text;
     return _renderPipeline(str);
+  }
+
+  /// Internal border+padding size (for wrapping/alignment calculations).
+  int get _horizontalBorderPaddingSize {
+    return getPaddingLeft +
+        getPaddingRight +
+        getBorderLeftSize +
+        getBorderRightSize;
   }
 
   String _renderPipeline(String s) {
@@ -701,8 +988,9 @@ class Style {
     }
 
     // 2. Tab conversion
-    if (getTabWidth >= 0) {
-      str = _convertTabs(str, getTabWidth);
+    final tw = getTabWidth;
+    if (tw >= 0) {
+      str = _convertTabs(str, tw);
     }
 
     // 3. Strip carriage returns
@@ -713,11 +1001,10 @@ class Style {
       str = str.replaceAll('\n', '');
     }
 
-    // 5. Word wrap if width is set
+    // 5. Word wrap if width is set (skip in inline mode)
     final w = getWidth;
-    final hFrameSize = getHorizontalFrameSize;
-    if (w > 0) {
-      final wrapAt = w - hFrameSize;
+    if (!getInline && w > 0) {
+      final wrapAt = w - _horizontalBorderPaddingSize;
       if (wrapAt > 0) {
         str = wordWrap(str, wrapAt);
       }
@@ -726,24 +1013,31 @@ class Style {
     // 6. Apply ANSI text styling
     str = _applyTextStyle(str);
 
-    // 7. Apply padding
-    str = _applyPadding(str);
-
-    // 8. Apply height constraint + vertical alignment
-    if (_props.has(PropKey.height) && _height > 0) {
-      str = _applyHeight(str, _height);
+    // 7. Apply padding (skip in inline mode)
+    if (!getInline) {
+      str = _applyPadding(str);
     }
 
-    // 9. Apply horizontal alignment
-    if (_props.has(PropKey.alignHorizontal)) {
+    // 8. Apply horizontal alignment (BEFORE vertical, matching Go order)
+    final numLines = '\n'.allMatches(str).length;
+    if (_props.has(PropKey.alignHorizontal) || numLines > 0 || w > 0) {
       str = _applyHorizontalAlignment(str);
     }
 
-    // 10. Apply border
-    str = _applyBorder(str);
+    // 9. Apply height constraint + vertical alignment
+    if (_props.has(PropKey.height) && _height > 0) {
+      str = _applyHeight(str);
+    }
 
-    // 11. Apply margin
-    str = _applyMargin(str);
+    // 10. Apply border (skip in inline mode)
+    if (!getInline) {
+      str = _applyBorder(str);
+    }
+
+    // 11. Apply margin (skip in inline mode)
+    if (!getInline) {
+      str = _applyMargin(str);
+    }
 
     // 12. Apply maxWidth truncation
     if (_props.has(PropKey.maxWidth) && _maxWidth > 0) {
@@ -759,43 +1053,71 @@ class Style {
   }
 
   String _convertTabs(String s, int tw) {
-    if (tw <= 0) return s;
+    if (tw == 0) return s.replaceAll('\t', '');
+    if (tw < 0) return s; // noTabConversion
     return s.replaceAll('\t', ' ' * tw);
   }
 
   String _applyTextStyle(String s) {
-    final style = AnsiStyle();
-    if (getBold) style.setBold();
-    if (getItalic) style.setItalic();
-    if (getFaint) style.setFaint();
-    if (getBlink) style.setBlink();
-    if (getReverse) style.setReverse();
-    if (getStrikethrough) style.setStrikethrough();
+    // Build main text style
+    final te = AnsiStyle();
+    if (getBold) te.setBold();
+    if (getItalic) te.setItalic();
+    if (getFaint) te.setFaint();
+    if (getBlink) te.setBlink();
+    if (getReverse) te.setReverse();
+    if (getStrikethrough) te.setStrikethrough();
 
     final us = getUnderlineStyle;
     if (us != UnderlineStyle.none) {
-      style.setUnderline(us);
+      te.setUnderline(us);
     }
 
     final uc = getUnderlineColor;
     if (uc is! NoColor) {
-      style.setUnderlineColor(uc);
+      te.setUnderlineColor(uc);
     }
 
     final fg = getForeground;
     if (fg is! NoColor) {
-      style.setForeground(fg);
+      te.setForeground(fg);
     }
 
     final bg = getBackground;
     if (bg is! NoColor) {
-      style.setBackground(bg);
+      te.setBackground(bg);
     }
+
+    // Determine if we need separate space styling
+    final underlineOn = us != UnderlineStyle.none;
+    final strikethroughOn = getStrikethrough;
+    final useSpaceStyler = (underlineOn && !getUnderlineSpaces) ||
+        (strikethroughOn && !getStrikethroughSpaces) ||
+        getUnderlineSpaces ||
+        getStrikethroughSpaces;
 
     // Apply hyperlink if set
     final link = getHyperlink;
+    final params = getHyperlinkParams;
 
-    if (!style.hasStyle && (link == null || link.isEmpty)) return s;
+    if (!te.hasStyle && (link == null || link.isEmpty)) return s;
+
+    // Build space style (fg/bg but conditional underline/strikethrough)
+    AnsiStyle? teSpace;
+    if (useSpaceStyler) {
+      teSpace = AnsiStyle();
+      if (getBold) teSpace.setBold();
+      if (getItalic) teSpace.setItalic();
+      if (getFaint) teSpace.setFaint();
+      if (getBlink) teSpace.setBlink();
+      if (getReverse) teSpace.setReverse();
+      if (fg is! NoColor) teSpace.setForeground(fg);
+      if (bg is! NoColor) teSpace.setBackground(bg);
+      if (uc is! NoColor) teSpace.setUnderlineColor(uc);
+      // Conditionally apply decorations to spaces
+      if (getUnderlineSpaces && underlineOn) teSpace.setUnderline(us);
+      if (getStrikethroughSpaces && strikethroughOn) teSpace.setStrikethrough();
+    }
 
     // Apply style to each line to handle multi-line correctly
     final lines = s.split('\n');
@@ -803,17 +1125,15 @@ class Style {
     for (var i = 0; i < lines.length; i++) {
       var line = lines[i];
       if (line.isNotEmpty) {
-        if (style.hasStyle) {
-          if (!getColorWhitespace &&
-              !getUnderlineSpaces &&
-              !getStrikethroughSpaces) {
-            line = _styleNonWhitespace(line, style);
+        if (te.hasStyle) {
+          if (useSpaceStyler) {
+            line = _styleWithSpaceStyler(line, te, teSpace!);
           } else {
-            line = style.styled(line);
+            line = te.styled(line);
           }
         }
         if (link != null && link.isNotEmpty) {
-          line = hl.hyperlink(link, line);
+          line = '${hl.setHyperlink(link, params)}$line${hl.resetHyperlink()}';
         }
       }
       buf.write(line);
@@ -823,31 +1143,41 @@ class Style {
     return buf.toString();
   }
 
-  String _styleNonWhitespace(String line, AnsiStyle style) {
-    // Walk the line and style only non-whitespace runs.
-    // Whitespace between styled segments is left unstyled.
+  /// Style text with separate styles for spaces vs non-spaces.
+  String _styleWithSpaceStyler(
+      String line, AnsiStyle teText, AnsiStyle teSpace) {
     final buf = StringBuffer();
-    final open = style.openSequence;
-    var inStyled = false;
+    final textOpen = teText.openSequence;
+    final spaceOpen = teSpace.openSequence;
+    var inText = false;
+    var inSpace = false;
 
     for (var i = 0; i < line.length; i++) {
       final ch = line[i];
       if (ch == ' ' || ch == '\t') {
-        if (inStyled) {
+        if (inText) {
           buf.write(resetSequence);
-          inStyled = false;
+          inText = false;
+        }
+        if (!inSpace) {
+          buf.write(spaceOpen);
+          inSpace = true;
         }
         buf.write(ch);
       } else {
-        if (!inStyled) {
-          buf.write(open);
-          inStyled = true;
+        if (inSpace) {
+          buf.write(resetSequence);
+          inSpace = false;
+        }
+        if (!inText) {
+          buf.write(textOpen);
+          inText = true;
         }
         buf.write(ch);
       }
     }
 
-    if (inStyled) {
+    if (inText || inSpace) {
       buf.write(resetSequence);
     }
 
@@ -873,11 +1203,15 @@ class Style {
 
     final bgStyle = _buildBgStyle();
 
+    // Build whitespace style for padding fill
+    final wsStyle = _buildWhitespaceStyle();
+
     final buf = StringBuffer();
 
     // Top padding
     if (pt > 0) {
-      final emptyLine = _padLine('', maxW, pl, pr, bgStyle);
+      final emptyLine =
+          _padLine('', maxW, pl, pr, bgStyle, wsStyle, _paddingChar);
       for (var i = 0; i < pt; i++) {
         buf.write(emptyLine);
         buf.write('\n');
@@ -886,13 +1220,15 @@ class Style {
 
     // Content lines with left/right padding
     for (var i = 0; i < lines.length; i++) {
-      buf.write(_padLine(lines[i], maxW, pl, pr, bgStyle));
+      buf.write(
+          _padLine(lines[i], maxW, pl, pr, bgStyle, wsStyle, _paddingChar));
       if (i < lines.length - 1) buf.write('\n');
     }
 
     // Bottom padding
     if (pb > 0) {
-      final emptyLine = _padLine('', maxW, pl, pr, bgStyle);
+      final emptyLine =
+          _padLine('', maxW, pl, pr, bgStyle, wsStyle, _paddingChar);
       for (var i = 0; i < pb; i++) {
         buf.write('\n');
         buf.write(emptyLine);
@@ -903,15 +1239,16 @@ class Style {
   }
 
   String _padLine(String line, int contentWidth, int leftPad, int rightPad,
-      AnsiStyle? bgStyle) {
+      AnsiStyle? bgStyle, AnsiStyle? wsStyle, String padChar) {
     final lineWidth = stringWidth(line);
     final rightFill = contentWidth - lineWidth + rightPad;
 
-    final left = renderWhitespace(leftPad, _paddingChar);
-    final right = renderWhitespace(rightFill, _paddingChar);
+    final left = renderWhitespace(leftPad, padChar);
+    final right = renderWhitespace(rightFill, padChar);
 
-    if (bgStyle != null && bgStyle.hasStyle) {
-      return '${bgStyle.styled(left)}$line${bgStyle.styled(right)}';
+    final effectiveStyle = wsStyle ?? bgStyle;
+    if (effectiveStyle != null && effectiveStyle.hasStyle) {
+      return '${effectiveStyle.styled(left)}$line${effectiveStyle.styled(right)}';
     }
     return '$left$line$right';
   }
@@ -922,18 +1259,59 @@ class Style {
     return AnsiStyle()..setBackground(bg);
   }
 
-  String _applyHeight(String s, int targetHeight) {
+  /// Build whitespace style for padding/alignment fill.
+  AnsiStyle? _buildWhitespaceStyle() {
+    final bg = getBackground;
+    final shouldStyle = getColorWhitespace || getReverse;
+    if (!shouldStyle && bg is NoColor) return null;
+
+    final ws = AnsiStyle();
+    if (bg is! NoColor) ws.setBackground(bg);
+    if (getReverse) ws.setReverse();
+    return ws.hasStyle ? ws : null;
+  }
+
+  String _applyHeight(String s) {
+    var targetHeight = getHeight;
+    // Subtract border size from target height
+    targetHeight -= getBorderTopSize;
+    targetHeight -= getBorderBottomSize;
+    if (targetHeight <= 0) return s;
+
     final lines = s.split('\n');
-    if (lines.length >= targetHeight) {
-      return lines.take(targetHeight).join('\n');
-    }
+    // Height is minimum height, not a crop. If content is taller, return as-is.
+    if (lines.length >= targetHeight) return s;
 
     final vAlign = getAlignVertical;
-    return alignTextVertical(s, vAlign, targetHeight);
+
+    // Build whitespace style for vertical fill
+    String? wsOpen;
+    String? wsClose;
+    if (getColorWhitespace || getReverse) {
+      final ws = _buildWhitespaceStyle();
+      if (ws != null && ws.hasStyle) {
+        wsOpen = ws.openSequence;
+        wsClose = resetSequence;
+      }
+    }
+
+    return alignTextVertical(s, vAlign, targetHeight, wsOpen, wsClose);
   }
 
   String _applyHorizontalAlignment(String s) {
     final w = getWidth;
+
+    // Build whitespace style for alignment fill
+    String? wsOpen;
+    String? wsClose;
+    if (getColorWhitespace || getReverse) {
+      final ws = _buildWhitespaceStyle();
+      if (ws != null && ws.hasStyle) {
+        wsOpen = ws.openSequence;
+        wsClose = resetSequence;
+      }
+    }
+
     if (w <= 0) {
       // Use natural width
       final lines = s.split('\n');
@@ -943,22 +1321,44 @@ class Style {
         if (lw > maxW) maxW = lw;
       }
       if (maxW == 0) return s;
-      return alignTextHorizontal(s, _alignHorizontal, maxW);
+      return alignTextHorizontal(s, getAlignHorizontal, maxW, wsOpen, wsClose);
     }
 
-    final alignWidth = w - getHorizontalFrameSize;
+    // Width only has borders subtracted (padding was already applied)
+    var alignWidth = w;
+    alignWidth -= getBorderLeftSize;
+    alignWidth -= getBorderRightSize;
     if (alignWidth <= 0) return s;
-    return alignTextHorizontal(s, _alignHorizontal, alignWidth);
+    return alignTextHorizontal(
+        s, getAlignHorizontal, alignWidth, wsOpen, wsClose);
   }
 
   String _applyBorder(String s) {
     final b = getBorderStyle;
-    final hasTop = getBorderTop;
-    final hasRight = getBorderRight;
-    final hasBottom = getBorderBottom;
-    final hasLeft = getBorderLeft;
+    var hasTop = getBorderTop;
+    var hasRight = getBorderRight;
+    var hasBottom = getBorderBottom;
+    var hasLeft = getBorderLeft;
+
+    // Auto-enable all sides when border style is set but no side flags
+    if (_isBorderStyleSetWithoutSides) {
+      hasTop = true;
+      hasRight = true;
+      hasBottom = true;
+      hasLeft = true;
+    }
 
     if (!hasTop && !hasRight && !hasBottom && !hasLeft) return s;
+
+    // Fill empty corners with spaces
+    var topLeftChar = b.topLeft;
+    var topRightChar = b.topRight;
+    var bottomLeftChar = b.bottomLeft;
+    var bottomRightChar = b.bottomRight;
+    if (hasTop && hasLeft && topLeftChar.isEmpty) topLeftChar = ' ';
+    if (hasTop && hasRight && topRightChar.isEmpty) topRightChar = ' ';
+    if (hasBottom && hasLeft && bottomLeftChar.isEmpty) bottomLeftChar = ' ';
+    if (hasBottom && hasRight && bottomRightChar.isEmpty) bottomRightChar = ' ';
 
     final lines = s.split('\n');
     var contentWidth = 0;
@@ -967,17 +1367,30 @@ class Style {
       if (w > contentWidth) contentWidth = w;
     }
 
-    final borderFg = getBorderForeground;
-    final borderBg = getBorderBackground;
-    final borderSgr = AnsiStyle();
-    if (borderFg is! NoColor) borderSgr.setForeground(borderFg);
-    if (borderBg is! NoColor) borderSgr.setBackground(borderBg);
-    final hasBorderStyle = borderSgr.hasStyle;
+    // Build per-side border style functions
+    String Function(String) styleBorderTop = (s) => s;
+    String Function(String) styleBorderRight = (s) => s;
+    String Function(String) styleBorderBottom = (s) => s;
+    String Function(String) styleBorderLeft = (s) => s;
 
-    String styleBorderStr(String str) {
-      if (!hasBorderStyle || str.isEmpty) return str;
-      return borderSgr.styled(str);
+    void buildSideStyler(LipglossColor fg, LipglossColor bg,
+        void Function(String Function(String)) setter) {
+      final sgr = AnsiStyle();
+      if (fg is! NoColor) sgr.setForeground(fg);
+      if (bg is! NoColor) sgr.setBackground(bg);
+      if (sgr.hasStyle) {
+        setter((str) => str.isEmpty ? str : sgr.styled(str));
+      }
     }
+
+    buildSideStyler(getBorderTopForeground, getBorderTopBackground,
+        (fn) => styleBorderTop = fn);
+    buildSideStyler(getBorderRightForeground, getBorderRightBackground,
+        (fn) => styleBorderRight = fn);
+    buildSideStyler(getBorderBottomForeground, getBorderBottomBackground,
+        (fn) => styleBorderBottom = fn);
+    buildSideStyler(getBorderLeftForeground, getBorderLeftBackground,
+        (fn) => styleBorderLeft = fn);
 
     final leftW = hasLeft ? b.getLeftSize() : 0;
     final rightW = hasRight ? b.getRightSize() : 0;
@@ -988,18 +1401,18 @@ class Style {
     // Top border
     if (hasTop) {
       final topEdge = renderHorizontalEdge(
-        hasLeft ? b.topLeft : '',
+        hasLeft ? topLeftChar : '',
         b.top,
-        hasRight ? b.topRight : '',
+        hasRight ? topRightChar : '',
         totalWidth,
       );
-      buf.write(styleBorderStr(topEdge));
+      buf.write(styleBorderTop(topEdge));
       buf.write('\n');
     }
 
     // Content lines with side borders
     for (var i = 0; i < lines.length; i++) {
-      if (hasLeft) buf.write(styleBorderStr(b.left));
+      if (hasLeft) buf.write(styleBorderLeft(b.left));
 
       final line = lines[i];
       final lineWidth = stringWidth(line);
@@ -1009,19 +1422,19 @@ class Style {
       final padNeeded = contentWidth - lineWidth;
       if (padNeeded > 0) buf.write(' ' * padNeeded);
 
-      if (hasRight) buf.write(styleBorderStr(b.right));
+      if (hasRight) buf.write(styleBorderRight(b.right));
       if (i < lines.length - 1 || hasBottom) buf.write('\n');
     }
 
     // Bottom border
     if (hasBottom) {
       final bottomEdge = renderHorizontalEdge(
-        hasLeft ? b.bottomLeft : '',
+        hasLeft ? bottomLeftChar : '',
         b.bottom,
-        hasRight ? b.bottomRight : '',
+        hasRight ? bottomRightChar : '',
         totalWidth,
       );
-      buf.write(styleBorderStr(bottomEdge));
+      buf.write(styleBorderBottom(bottomEdge));
     }
 
     return buf.toString();
@@ -1152,6 +1565,15 @@ class Style {
     LipglossColor? borderForeground,
     LipglossColor? borderBackground,
     List<LipglossColor>? borderForegroundBlend,
+    LipglossColor? borderTopForeground,
+    LipglossColor? borderRightForeground,
+    LipglossColor? borderBottomForeground,
+    LipglossColor? borderLeftForeground,
+    LipglossColor? borderTopBackground,
+    LipglossColor? borderRightBackground,
+    LipglossColor? borderBottomBackground,
+    LipglossColor? borderLeftBackground,
+    int? borderForegroundBlendOffset,
     bool? inline,
     int? tabWidth,
     bool? underlineSpaces,
@@ -1159,7 +1581,9 @@ class Style {
     bool? colorWhitespace,
     String Function(String)? transform,
     String? hyperlink,
+    Map<String, String>? hyperlinkParams,
     String? value,
+    bool clearValue = false,
   }) {
     return Style._(
       props: props ?? _props,
@@ -1198,6 +1622,16 @@ class Style {
       borderForeground: borderForeground ?? _borderForeground,
       borderBackground: borderBackground ?? _borderBackground,
       borderForegroundBlend: borderForegroundBlend ?? _borderForegroundBlend,
+      borderTopForeground: borderTopForeground ?? _borderTopForeground,
+      borderRightForeground: borderRightForeground ?? _borderRightForeground,
+      borderBottomForeground: borderBottomForeground ?? _borderBottomForeground,
+      borderLeftForeground: borderLeftForeground ?? _borderLeftForeground,
+      borderTopBackground: borderTopBackground ?? _borderTopBackground,
+      borderRightBackground: borderRightBackground ?? _borderRightBackground,
+      borderBottomBackground: borderBottomBackground ?? _borderBottomBackground,
+      borderLeftBackground: borderLeftBackground ?? _borderLeftBackground,
+      borderForegroundBlendOffset:
+          borderForegroundBlendOffset ?? _borderForegroundBlendOffset,
       inline: inline ?? _inline,
       tabWidth: tabWidth ?? _tabWidth,
       underlineSpaces: underlineSpaces ?? _underlineSpaces,
@@ -1205,7 +1639,8 @@ class Style {
       colorWhitespace: colorWhitespace ?? _colorWhitespace,
       transform: transform ?? _transform,
       hyperlink: hyperlink ?? _hyperlink,
-      value: value ?? _value,
+      hyperlinkParams: hyperlinkParams ?? _hyperlinkParams,
+      value: clearValue ? null : (value ?? _value),
     );
   }
 
@@ -1217,20 +1652,63 @@ class Style {
     int? left,
   ]) {
     if (right == null && bottom == null && left == null) {
-      // 1 arg = all sides
       return (top: top, right: top, bottom: top, left: top);
     }
     if (bottom == null && left == null) {
-      // 2 args = vert/horiz — right is non-null since first check failed
       final r = right!;
       return (top: top, right: r, bottom: top, left: r);
     }
     if (left == null) {
-      // 3 args = top/horiz/bottom — right and bottom are non-null
       final r = right!;
       return (top: top, right: r, bottom: bottom!, left: r);
     }
-    // 4 args = all four
+    return (top: top, right: right!, bottom: bottom!, left: left);
+  }
+
+  /// CSS-style shorthand helper for boolean values.
+  static ({bool top, bool right, bool bottom, bool left}) _whichSidesBool(
+    bool top, [
+    bool? right,
+    bool? bottom,
+    bool? left,
+  ]) {
+    if (right == null && bottom == null && left == null) {
+      return (top: top, right: top, bottom: top, left: top);
+    }
+    if (bottom == null && left == null) {
+      final r = right!;
+      return (top: top, right: r, bottom: top, left: r);
+    }
+    if (left == null) {
+      final r = right!;
+      return (top: top, right: r, bottom: bottom!, left: r);
+    }
+    return (top: top, right: right!, bottom: bottom!, left: left);
+  }
+
+  /// CSS-style shorthand helper for color values.
+  static ({
+    LipglossColor top,
+    LipglossColor right,
+    LipglossColor bottom,
+    LipglossColor left
+  }) _whichSidesColor(
+    LipglossColor top, [
+    LipglossColor? right,
+    LipglossColor? bottom,
+    LipglossColor? left,
+  ]) {
+    if (right == null && bottom == null && left == null) {
+      return (top: top, right: top, bottom: top, left: top);
+    }
+    if (bottom == null && left == null) {
+      final r = right!;
+      return (top: top, right: r, bottom: top, left: r);
+    }
+    if (left == null) {
+      final r = right!;
+      return (top: top, right: r, bottom: bottom!, left: r);
+    }
     return (top: top, right: right!, bottom: bottom!, left: left);
   }
 }
